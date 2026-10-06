@@ -33,13 +33,6 @@
 
   var visualV3=document.createElement('style');
   visualV3.textContent=\`
-    .mapScene{
-      background-image:url("art/map_bg_sm.webp")!important;
-      background-size:100% 100%!important;
-      background-position:center!important;
-      background-repeat:no-repeat!important;
-      box-shadow:none!important;
-    }
     .mapDecor{display:none!important}
 
     .tile{
@@ -70,21 +63,18 @@
     .tile.l3{width:100px!important;height:84px!important}
     .tile.l1:before{
       width:88px!important;height:88px!important;
-      background-image:url("art/l1_1_sm.webp")!important;
       background-size:contain!important;
       background-position:center!important;
       transform:translate(-50%,-52%) rotate(var(--rot,0deg))!important;
     }
     .tile.l2:before{
       width:96px!important;height:96px!important;
-      background-image:url("art/l2_1_sm.webp")!important;
       background-size:contain!important;
       background-position:center!important;
       transform:translate(-50%,-53%) rotate(var(--rot,0deg))!important;
     }
     .tile.l3:before{
       width:106px!important;height:106px!important;
-      background-image:url("art/l3_1_sm.webp")!important;
       background-size:contain!important;
       background-position:center!important;
       transform:translate(-50%,-54%) rotate(var(--rot,0deg))!important;
@@ -126,7 +116,6 @@
       inset:auto!important;
       width:142px!important;
       height:142px!important;
-      background-image:url("art/base_sm.webp")!important;
       background-repeat:no-repeat!important;
       background-position:center!important;
       background-size:contain!important;
