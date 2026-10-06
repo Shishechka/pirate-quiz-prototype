@@ -31,11 +31,11 @@
   `;
   document.head.appendChild(visual);
   var COLORS_UI={R:'#e24a42',B:'#3d80e7',G:'#3aaa68',P:'#9b57d3'};
-  var WORLD_W=1600,WORLD_H=780,SAFE_TOP=64,SAFE_BOTTOM=76;
-  var BASE_POS={A:{x:180,y:170},B:{x:1420,y:170},C:{x:180,y:620},D:{x:1420,y:620}};
-  var colX=[335,520,705,895,1080,1265], rowY=[175,265,355,445,535,625];
-  var jitterX=[0,-10,8,12,-8,7,9,5,-12,10,-5,9,-6,11,-10,7,10,-8,5,-7,8,-8,12,-6,10,-9,6,9,-11,5,-4,10,-8,7,-9,6];
-  var jitterY=[0,5,-5,4,-6,5,-5,6,3,-6,5,-3,4,-4,7,-5,4,0,-4,5,-6,3,6,-3,4,-5,5,-3,6,-4,-3,5,-5,4,-5,4];
+  var WORLD_W=1600,WORLD_H=900;
+  var BASE_POS={A:{x:160,y:205},B:{x:1440,y:205},C:{x:160,y:655},D:{x:1440,y:655}};
+  var colX=[330,515,700,900,1085,1270], rowY=[190,280,370,460,550,640];
+  var jitterX=[0,-9,8,10,-8,6,8,5,-11,9,-5,8,-6,10,-9,7,9,-7,5,-7,8,-8,11,-6,9,-8,6,8,-10,5,-4,9,-7,7,-8,6];
+  var jitterY=[0,4,-4,3,-5,4,-4,5,2,-5,4,-3,4,-4,6,-5,3,0,-4,4,-5,3,5,-3,4,-4,4,-3,5,-4,-3,4,-4,3,-4,3];
   function posOfUi(node){if(typeof node==='string')return BASE_POS[node];var idx=node-1,r=Math.floor(idx/6),c=idx%6;return{x:colX[c]+jitterX[idx],y:rowY[r]+jitterY[idx]};}
 
   var legacyRender=render;
@@ -121,9 +121,11 @@
 
   var view={baseScale:1,zoom:1,tx:0,ty:0,minZoom:1,maxZoom:2.35,pointers:new Map(),startDist:0,startZoom:1,startMid:null,startTx:0,startTy:0,moved:false,blockClick:false};
   function currentScale(){return view.baseScale*view.zoom;}
-  function clampView(){var vp=$('mapViewport'),scale=currentScale(),sw=WORLD_W*scale,sh=WORLD_H*scale,vw=vp.clientWidth,vh=vp.clientHeight,usableH=Math.max(1,vh-SAFE_TOP-SAFE_BOTTOM),minX=Math.min(0,vw-sw),minY=SAFE_TOP+usableH-sh,maxY=SAFE_TOP;if(sw<=vw)view.tx=(vw-sw)/2;else view.tx=Math.min(0,Math.max(minX,view.tx));if(sh<=usableH)view.ty=SAFE_TOP+(usableH-sh)/2;else view.ty=Math.min(maxY,Math.max(minY,view.ty));}
+  function contentBounds(){var left=1e9,right=-1e9,top=1e9,bottom=-1e9;for(var i=1;i<=36;i++){var p=posOfUi(i),rx=lv(i)===3?52:lv(i)===2?46:41,ry=lv(i)===3?43:lv(i)===2?38:34;left=Math.min(left,p.x-rx);right=Math.max(right,p.x+rx);top=Math.min(top,p.y-ry);bottom=Math.max(bottom,p.y+ry);}['A','B','C','D'].forEach(function(b){var p=BASE_POS[b];left=Math.min(left,p.x-72);right=Math.max(right,p.x+72);top=Math.min(top,p.y-62);bottom=Math.max(bottom,p.y+62);});return{left:left-56,right:right+56,top:top-56,bottom:bottom+56};}
+  function usableRect(){var vp=$('mapViewport'),left=14,top=72,right=Math.max(320,vp.clientWidth-170),bottom=Math.max(top+200,vp.clientHeight-72);return{left:left,top:top,right:right,bottom:bottom,width:right-left,height:bottom-top};}
+  function clampView(){var scale=currentScale(),b=contentBounds(),u=usableRect(),cw=(b.right-b.left)*scale,ch=(b.bottom-b.top)*scale,minX=u.right-b.right*scale,maxX=u.left-b.left*scale,minY=u.bottom-b.bottom*scale,maxY=u.top-b.top*scale;if(cw<=u.width)view.tx=u.left+(u.width-cw)/2-b.left*scale;else view.tx=Math.min(maxX,Math.max(minX,view.tx));if(ch<=u.height)view.ty=u.top+(u.height-ch)/2-b.top*scale;else view.ty=Math.min(maxY,Math.max(minY,view.ty));}
   function applyView(){clampView();$('mapScene').style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+currentScale()+')';}
-  window.resetMapView=function(){var vp=$('mapViewport');if(!vp||!vp.clientWidth||!vp.clientHeight)return;var usableH=Math.max(1,vp.clientHeight-SAFE_TOP-SAFE_BOTTOM);view.baseScale=Math.min(vp.clientWidth/WORLD_W,usableH/WORLD_H);view.zoom=1;view.tx=(vp.clientWidth-WORLD_W*view.baseScale)/2;view.ty=SAFE_TOP+(usableH-WORLD_H*view.baseScale)/2;applyView();};
+  window.resetMapView=function(){var vp=$('mapViewport');if(!vp||!vp.clientWidth||!vp.clientHeight)return;var b=contentBounds(),u=usableRect();view.baseScale=Math.min(u.width/(b.right-b.left),u.height/(b.bottom-b.top));view.zoom=1;view.tx=u.left+(u.width-(b.right-b.left)*view.baseScale)/2-b.left*view.baseScale;view.ty=u.top+(u.height-(b.bottom-b.top)*view.baseScale)/2-b.top*view.baseScale;applyView();};
   function zoomBy(mult,cx,cy){var vp=$('mapViewport'),old=currentScale(),rect=vp.getBoundingClientRect(),x=cx==null?rect.left+vp.clientWidth/2:cx,y=cy==null?rect.top+vp.clientHeight/2:cy,lx=x-rect.left,ly=y-rect.top,sceneX=(lx-view.tx)/old,sceneY=(ly-view.ty)/old;view.zoom=Math.min(view.maxZoom,Math.max(view.minZoom,view.zoom*mult));var next=currentScale();view.tx=lx-sceneX*next;view.ty=ly-sceneY*next;applyView();}
   function setupGestures(){
     var vp=$('mapViewport');
