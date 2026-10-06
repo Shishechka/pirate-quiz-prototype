@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Pirate Quiz Prototype</title>
+<style>
+:root{--bg:#071922;--panel:#0e2a35;--panel2:#143744;--text:#f6ecd2;--muted:#b8c8c8;--gold:#d8ae54;--r:#ef5a50;--b:#4c91ff;--g:#43c279;--p:#b46cff;--line:#47717e}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif}button,input{font:inherit}button{color:var(--text)}
+#app{padding:10px 10px 24px;max-width:900px;margin:auto}.top{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.card{background:var(--panel);border:1px solid #244b58;border-radius:13px;padding:9px}.label{font-size:11px;color:var(--muted)}.value{font-weight:800;font-size:17px;margin-top:2px}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.btn{border:1px solid #365d69;background:var(--panel2);border-radius:11px;padding:10px 12px;min-height:42px}.btn.gold{background:#5d4416;border-color:#8a6927}.btn.on{outline:2px solid var(--gold)}.btn:disabled{opacity:.4}.status{font-size:13px;color:var(--muted);min-height:36px;padding:8px 4px}.mapWrap{position:relative;background:linear-gradient(#0d5060,#0c3442);border:1px solid #2c5a67;border-radius:18px;padding:12px;overflow:auto}.map{min-width:540px;display:grid;grid-template-columns:repeat(6,72px);gap:10px;justify-content:center;padding:42px 26px}.tile{position:relative;width:72px;height:72px;border-radius:48% 52% 45% 55%;border:3px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-weight:800;background:#91734a;box-shadow:0 0 0 6px var(--owner),0 5px 13px #0006}.tile.l2{width:78px;height:78px;margin:-3px}.tile.l3{width:84px;height:84px;margin:-6px}.tile small{position:absolute;bottom:3px;font-size:10px;background:#0008;padding:1px 5px;border-radius:8px}.ship{position:absolute;top:-18px;font-size:22px;text-shadow:0 2px 2px #000}.base{position:absolute;width:90px;height:52px;border:3px solid currentColor;border-radius:14px;background:#102731;display:flex;align-items:center;justify-content:center;font-weight:900;z-index:3}.baseA{left:8px;top:8px;color:var(--r)}.baseB{right:8px;top:8px;color:var(--b)}.baseC{left:8px;bottom:8px;color:var(--g)}.baseD{right:8px;bottom:8px;color:var(--p)}.legend{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.log{max-height:150px;overflow:auto;font-size:12px;color:var(--muted);line-height:1.4}.overlay{position:fixed;inset:0;background:#031015df;display:none;align-items:flex-end;z-index:50}.overlay.show{display:flex}.sheet{width:100%;background:#f3e1ba;color:#201a12;border-radius:22px 22px 0 0;padding:18px 14px 22px;max-height:88vh;overflow:auto}.sheet h2{margin:0 0 8px}.answers{display:grid;gap:9px}.answer{background:#123342;color:white;border:2px solid #325c69;border-radius:13px;padding:13px;text-align:left;min-height:50px}.subtle{color:#665943;font-size:13px}.numrow{display:flex;gap:8px}.numrow input{flex:1;padding:12px;border-radius:10px;border:1px solid #a58d61;font-size:18px}.result{font-weight:800;margin-top:8px}.scoregrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.score{padding:10px;border-radius:10px;background:#0b2029}.r{color:var(--r)}.b{color:var(--b)}.g{color:var(--g)}.p{color:var(--p)}
+</style>
+</head>
+<body><main id="app">
+<div class="top">
+ <div class="card"><div class="label">Раунд</div><div class="value" id="roundV">1 / 8</div></div>
+ <div class="card"><div class="label">Монеты</div><div class="value" id="coinsV">20</div></div>
+ <div class="card"><div class="label">Флагман</div><div class="value" id="shipV">3HP · 1</div></div>
+ <div class="card"><div class="label">Слава</div><div class="value" id="fameV">0</div></div>
+</div>
+<div class="toolbar">
+ <button id="modeBtn" class="btn">К атаке</button>
+ <button id="secretBtn" class="btn">🗺 Тайный путь ×1</button>
+ <button id="hpBtn" class="btn">+HP · 20</button>
+ <button id="dmgBtn" class="btn">+Урон · 30</button>
+ <button id="homeBtn" class="btn">🚢 На базу</button>
+ <button id="newBtn" class="btn gold">Новая партия</button>
+</div>
+<div id="status" class="status"></div>
+<div class="mapWrap">
+ <button class="base baseA" data-base="A">База A</button><button class="base baseB" data-base="B">База B</button><button class="base baseC" data-base="C">База C</button><button class="base baseD" data-base="D">База D</button>
+ <div id="map" class="map"></div>
+</div>
+<div class="legend">
+ <div class="card"><b>Базы</b><div id="basesInfo" class="subtle"></div></div>
+ <div class="card"><b>Порядок</b><div id="orderInfo" class="subtle"></div></div>
+</div>
+<div class="card" style="margin-top:8px"><b>Журнал</b><div id="log" class="log"></div></div>
+</main>
+<div id="questionOverlay" class="overlay"><section class="sheet">
+ <div id="battleMeta" class="subtle"></div><h2 id="qText"></h2><div id="answers" class="answers"></div>
+ <div id="numericBox" style="display:none"><p id="nText"></p><div class="numrow"><input id="nInput" type="number" inputmode="decimal"/><button id="nSend" class="btn gold">Ответить</button></div></div>
+ <div id="battleResult" class="result"></div>
+</section></div>
+<script src="game.js"></script>
+</body></html>
