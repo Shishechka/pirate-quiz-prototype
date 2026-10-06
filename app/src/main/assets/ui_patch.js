@@ -30,6 +30,179 @@
   .ship{top:-24px!important;font-size:22px!important}.enemyShip{font-size:20px!important}.mapDecor{opacity:.23!important}
   `;
   document.head.appendChild(visual);
+
+  var visualV3=document.createElement('style');
+  visualV3.textContent=\`
+    .mapScene{
+      background-image:url("art/map_bg_sm.webp")!important;
+      background-size:100% 100%!important;
+      background-position:center!important;
+      background-repeat:no-repeat!important;
+      box-shadow:none!important;
+    }
+    .mapDecor{display:none!important}
+
+    .tile{
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      border-radius:0!important;
+      overflow:visible!important;
+    }
+    .tile:after{display:none!important}
+    .tile:before{
+      content:''!important;
+      position:absolute!important;
+      left:50%!important;
+      top:50%!important;
+      inset:auto!important;
+      background-repeat:no-repeat!important;
+      background-position:center!important;
+      background-size:contain!important;
+      z-index:2!important;
+      filter:
+        drop-shadow(0 2px 2px rgba(31,17,8,.55))
+        drop-shadow(0 0 2px var(--owner))
+        drop-shadow(0 0 5px var(--owner))!important;
+    }
+    .tile.l1{width:82px!important;height:68px!important}
+    .tile.l2{width:90px!important;height:76px!important}
+    .tile.l3{width:100px!important;height:84px!important}
+    .tile.l1:before{
+      width:88px!important;height:88px!important;
+      background-image:url("art/l1_1_sm.webp")!important;
+      background-size:contain!important;
+      background-position:center!important;
+      transform:translate(-50%,-52%) rotate(var(--rot,0deg))!important;
+    }
+    .tile.l2:before{
+      width:96px!important;height:96px!important;
+      background-image:url("art/l2_1_sm.webp")!important;
+      background-size:contain!important;
+      background-position:center!important;
+      transform:translate(-50%,-53%) rotate(var(--rot,0deg))!important;
+    }
+    .tile.l3:before{
+      width:106px!important;height:106px!important;
+      background-image:url("art/l3_1_sm.webp")!important;
+      background-size:contain!important;
+      background-position:center!important;
+      transform:translate(-50%,-54%) rotate(var(--rot,0deg))!important;
+    }
+    .tile.legal{
+      outline:2px dashed #f7d979!important;
+      outline-offset:4px!important;
+      border-radius:18px!important;
+    }
+    .tile.movable{
+      outline:2px dashed #fff0bc!important;
+      outline-offset:3px!important;
+      border-radius:18px!important;
+    }
+    .islandNo{
+      z-index:5!important;
+      bottom:-8px!important;
+      font-size:8px!important;
+      line-height:11px!important;
+      padding:0 4px!important;
+    }
+
+    .base{
+      width:138px!important;
+      height:122px!important;
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      border-radius:0!important;
+      overflow:visible!important;
+      font-size:0!important;
+    }
+    .base:after{display:none!important}
+    .base:before{
+      content:''!important;
+      position:absolute!important;
+      left:50%!important;
+      top:50%!important;
+      inset:auto!important;
+      width:142px!important;
+      height:142px!important;
+      background-image:url("art/base_sm.webp")!important;
+      background-repeat:no-repeat!important;
+      background-position:center!important;
+      background-size:contain!important;
+      transform:translate(-50%,-52%)!important;
+      filter:
+        drop-shadow(0 4px 3px rgba(27,13,6,.55))
+        drop-shadow(0 0 3px var(--baseColor))
+        drop-shadow(0 0 7px var(--baseColor))!important;
+      z-index:2!important;
+    }
+    .base.legal{
+      outline:3px solid #f7d979!important;
+      outline-offset:5px!important;
+      border-radius:22px!important;
+    }
+    .baseLabel{
+      position:absolute!important;
+      left:50%!important;
+      bottom:-5px!important;
+      transform:translateX(-50%)!important;
+      z-index:5!important;
+      white-space:nowrap!important;
+      background:rgba(47,30,17,.78)!important;
+      color:#f8e9c7!important;
+      border:1px solid rgba(195,157,92,.8)!important;
+      border-radius:7px!important;
+      padding:1px 6px!important;
+      font:700 8px/12px system-ui,sans-serif!important;
+      text-shadow:none!important;
+    }
+
+    .turnBoard{
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      padding:0!important;
+      height:auto!important;
+      min-width:0!important;
+      width:auto!important;
+      max-width:none!important;
+      bottom:max(10px,env(safe-area-inset-bottom))!important;
+    }
+    .turnCaption{display:none!important}
+    .timeline{
+      display:flex!important;
+      gap:13px!important;
+      align-items:center!important;
+      justify-content:center!important;
+      height:auto!important;
+    }
+    .roundTrack{
+      display:flex!important;
+      gap:4px!important;
+      padding:0!important;
+      min-width:0!important;
+    }
+    .roundTrack:before,.roundTrack:after{display:none!important}
+    .turnMark{
+      display:block!important;
+      width:13px!important;
+      height:4px!important;
+      border-radius:4px!important;
+      flex:none!important;
+      background:var(--mark)!important;
+      box-shadow:0 1px 2px rgba(34,20,10,.55)!important;
+    }
+    .turnMark.done{opacity:.24!important}
+    .turnMark.current{
+      width:16px!important;
+      height:6px!important;
+      outline:1px solid #fff0b7!important;
+      box-shadow:0 0 7px #fff0b7!important;
+      transform:none!important;
+    }
+  \`;
+  document.head.appendChild(visualV3);
   var COLORS_UI={R:'#e24a42',B:'#3d80e7',G:'#3aaa68',P:'#9b57d3'};
   var BASE_POS={A:{x:185,y:145},B:{x:1415,y:145},C:{x:185,y:755},D:{x:1415,y:755}};
   var colX=[345,525,705,895,1075,1255], rowY=[175,280,385,500,615,720];
@@ -90,7 +263,7 @@
     });
     ['A','B','C','D'].forEach(function(baseId){
       var el=document.querySelector('[data-base="'+baseId+'"]'),p=BASE_POS[baseId],owner=OWNER_BASE[baseId];
-      el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.setProperty('--baseColor',COLORS_UI[owner]);el.classList.toggle('legal',attackSet.has(baseId));
+      el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.setProperty('--baseColor',COLORS_UI[owner]);el.classList.toggle('legal',attackSet.has(baseId));var sh=S.players[owner].ship;var ship=(sh.pos===baseId&&!sh.sunk)?' '+(owner==='R'?'🚢':'⛵'):'';el.innerHTML='<span class="baseLabel">База '+baseId+' · '+S.bases[baseId]+ship+'</span>';
     });
     drawRoutesUi(attackSet);
   }
