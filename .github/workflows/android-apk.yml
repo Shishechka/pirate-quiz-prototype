@@ -22,18 +22,6 @@ jobs:
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-      - name: Package Android signing tools
-        run: |
-          mkdir -p ci-apksigner/lib
-          cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" ci-apksigner/
-          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" ci-apksigner/
-          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" ci-apksigner/lib/
-          mkdir -p ci-apksigner/lib64
-          cp "$ANDROID_HOME/build-tools/35.0.0/lib64/libc++.so" ci-apksigner/lib64/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-apksigner-35
-          path: ci-apksigner
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
