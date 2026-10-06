@@ -28,6 +28,8 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" ci-apksigner/
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" ci-apksigner/
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" ci-apksigner/lib/
+          mkdir -p ci-apksigner/lib64
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib64/libc++.so" ci-apksigner/lib64/
       - uses: actions/upload-artifact@v4
         with:
           name: android-apksigner-35
