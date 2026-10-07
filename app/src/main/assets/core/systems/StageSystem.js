@@ -136,7 +136,9 @@ export class StageSystem {
       PLAYER_IDS.map(playerId => [playerId, 0]),
     );
     state.warState.turnActionUsed = false;
-    state.warState.turnBoostUsed = false;
+    state.warState.boostUsedByPlayer = Object.fromEntries(
+      PLAYER_IDS.map(playerId => [playerId, null]),
+    );
     state.warState.selectedTurnBoost = null;
     state.warState.blackMarks = [];
     state.warState.tiebreak = null;
