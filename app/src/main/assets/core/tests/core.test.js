@@ -91,6 +91,13 @@ test('GameState is created with the complete central game state', () => {
     assert.equal(typeof player.ship.hp, 'number');
     assert.equal(typeof player.ship.maxHp, 'number');
     assert.equal(typeof player.ship.dmg, 'number');
+    assert.equal(player.ship.crewSlots, 1);
+    assert.deepEqual(player.ship.installedCrew, []);
+    assert.deepEqual(player.ship.upgrades, {
+      hp: 0,
+      damage: 0,
+      crewSlots: 0,
+    });
     assert.equal(typeof player.boosts, 'object');
     assert.equal(player.boosts[BOOST_TYPES.SECRET_ROUTE], 1);
   }
@@ -797,6 +804,159 @@ test('EconomySystem records deterministic transaction history and reasons', () =
   assert.equal(game.state.economyState.nextTransactionId, 3);
 });
 
+test('flagship starts with Rules v0.3 base characteristics', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+  const ship = game.flagshipSystem.getFlagship(game.state, 'R');
+
+  assert.equal(ship.hp, 3);
+  assert.equal(ship.maxHp, 3);
+  assert.equal(ship.dmg, 1);
+  assert.equal(ship.crewSlots, 1);
+  assert.deepEqual(ship.installedCrew, []);
+  assert.deepEqual(ship.upgrades, {
+    hp: 0,
+    damage: 0,
+    crewSlots: 0,
+  });
+});
+
+test('buying +1 HP costs 20 dubloons and increases current and maximum HP', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  assert.equal(game.flagshipSystem.canPurchaseHpUpgrade(game.state, 'R'), true);
+
+  const result = game.flagshipSystem.purchaseHpUpgrade({
+    state: game.state,
+    playerId: 'R',
+  });
+
+  const ship = game.flagshipSystem.getFlagship(game.state, 'R');
+  assert.equal(result.transaction.amount, 20);
+  assert.equal(result.transaction.reason, 'FLAGSHIP_HP_UPGRADE');
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), 0);
+  assert.equal(ship.hp, 4);
+  assert.equal(ship.maxHp, 4);
+  assert.equal(ship.upgrades.hp, 1);
+});
+
+test('buying +1 Damage costs 30 dubloons and increases damage by one', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  game.economySystem.credit({
+    state: game.state,
+    playerId: 'R',
+    amount: 10,
+    reason: 'TEST_FUNDS',
+  });
+
+  const result = game.flagshipSystem.purchaseDamageUpgrade({
+    state: game.state,
+    playerId: 'R',
+  });
+
+  const ship = game.flagshipSystem.getFlagship(game.state, 'R');
+  assert.equal(result.transaction.amount, 30);
+  assert.equal(result.transaction.reason, 'FLAGSHIP_DAMAGE_UPGRADE');
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), 0);
+  assert.equal(ship.dmg, 2);
+  assert.equal(ship.upgrades.damage, 1);
+});
+
+test('buying +1 Crew Slot costs 30 dubloons and increases capacity by one', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  game.economySystem.credit({
+    state: game.state,
+    playerId: 'R',
+    amount: 10,
+    reason: 'TEST_FUNDS',
+  });
+
+  const result = game.flagshipSystem.purchaseCrewSlotUpgrade({
+    state: game.state,
+    playerId: 'R',
+  });
+
+  const ship = game.flagshipSystem.getFlagship(game.state, 'R');
+  assert.equal(result.transaction.amount, 30);
+  assert.equal(result.transaction.reason, 'FLAGSHIP_CREW_SLOT_UPGRADE');
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), 0);
+  assert.equal(ship.crewSlots, 2);
+  assert.equal(ship.upgrades.crewSlots, 1);
+});
+
+test('flagship upgrades cannot spend more dubloons than the player has', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+  const ship = game.flagshipSystem.getFlagship(game.state, 'R');
+  const before = {
+    balance: game.economySystem.getBalance(game.state, 'R'),
+    damage: ship.dmg,
+    upgrades: ship.upgrades.damage,
+    historyLength: game.economySystem.getHistory(game.state, 'R').length,
+  };
+
+  assert.equal(game.flagshipSystem.canPurchaseDamageUpgrade(game.state, 'R'), false);
+
+  assert.throws(
+    () => game.flagshipSystem.purchaseDamageUpgrade({
+      state: game.state,
+      playerId: 'R',
+    }),
+    /Insufficient dubloons/,
+  );
+
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), before.balance);
+  assert.equal(ship.dmg, before.damage);
+  assert.equal(ship.upgrades.damage, before.upgrades);
+  assert.equal(
+    game.economySystem.getHistory(game.state, 'R').length,
+    before.historyLength,
+  );
+});
+
+test('flagship stores installed crew and enforces available crew slots only', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  assert.equal(game.flagshipSystem.canInstallCrew(game.state, 'R'), true);
+
+  game.flagshipSystem.installCrew({
+    state: game.state,
+    playerId: 'R',
+    crewMember: { id: 'crew-1' },
+  });
+
+  assert.deepEqual(
+    game.flagshipSystem.getInstalledCrew(game.state, 'R'),
+    [{ id: 'crew-1' }],
+  );
+  assert.equal(game.flagshipSystem.canInstallCrew(game.state, 'R'), false);
+
+  assert.throws(
+    () => game.flagshipSystem.installCrew({
+      state: game.state,
+      playerId: 'R',
+      crewMember: { id: 'crew-2' },
+    }),
+    /No free crew slot/,
+  );
+});
+
+test('destruction and return state is not changed by flagship upgrade purchases', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+  const ship = game.flagshipSystem.getFlagship(game.state, 'R');
+
+  ship.sunk = true;
+  ship.pos = null;
+
+  game.flagshipSystem.purchaseHpUpgrade({
+    state: game.state,
+    playerId: 'R',
+  });
+
+  assert.equal(ship.sunk, true);
+  assert.equal(ship.pos, null);
+});
+
 test('RoundSystem creates 8 rounds and every round contains each player exactly once', () => {
   const rounds = new RoundSystem({ rng: fixedRng() });
   const orders = rounds.createTurnOrders();
@@ -852,6 +1012,7 @@ test('core modules have no direct browser UI dependency', () => {
     'systems/ArchipelagoSystem.js',
     'systems/BoostSystem.js',
     'systems/EconomySystem.js',
+    'systems/FlagshipSystem.js',
     'systems/RoundSystem.js',
     'systems/TurnSystem.js',
   ];

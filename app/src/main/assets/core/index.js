@@ -10,6 +10,7 @@ import { GameState } from './state/GameState.js';
 import { ArchipelagoSystem } from './systems/ArchipelagoSystem.js';
 import { BoostSystem } from './systems/BoostSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
+import { FlagshipSystem } from './systems/FlagshipSystem.js';
 import { RoundSystem } from './systems/RoundSystem.js';
 import { TurnSystem } from './systems/TurnSystem.js';
 
@@ -17,6 +18,7 @@ export {
   ArchipelagoSystem,
   BoostSystem,
   EconomySystem,
+  FlagshipSystem,
   GameState,
   Player,
   Ship,
@@ -72,6 +74,7 @@ export function createCoreGame({
   const economySystem = new EconomySystem({
     prices: economyPrices ?? undefined,
   });
+  const flagshipSystem = new FlagshipSystem({ economySystem });
   const archipelagoSystem = new ArchipelagoSystem({ map, boostSystem });
   const turnSystem = new TurnSystem({ roundSystem });
 
@@ -80,6 +83,7 @@ export function createCoreGame({
     map,
     boostSystem,
     economySystem,
+    flagshipSystem,
     archipelagoSystem,
     roundSystem,
     turnSystem,
