@@ -1,0 +1,24 @@
+name: Pirate Quiz Core Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'core/**'
+  pull_request:
+    paths:
+      - 'app/src/main/assets/core/**'
+      - '.github/workflows/core-tests.yml'
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run core unit tests
+        run: node --test app/src/main/assets/core/tests/*.test.js
