@@ -79,10 +79,16 @@
     humanMode='CLAIM';
     render();
 
-    if(p==='R')return;
+    if(p==='R'){
+      S.claimScheduled=false;
+      return;
+    }
+    if(S.claimScheduled)return;
+    S.claimScheduled=true;
 
     setTimeout(()=>{
       if(token!==runToken||!S||S.phase!=='CLAIM')return;
+      S.claimScheduled=false;
       const id=botChooseClaim(p);
       if(id!=null){
         S.owners[id]=p;
@@ -99,6 +105,7 @@
     S.claimRank=rank;
     S.claimQueue=[...rank,rank[0],rank[1]];
     S.claimIndex=0;
+    S.claimScheduled=false;
     S.order=S.claimQueue;
     S.idx=0;
     log('— Освоение '+S.claimRound+'/6. Порядок: '+rank.join(' → ')+'. Первые двое получают второй захват.');
@@ -137,6 +144,7 @@
       claimRank:[],
       claimQueue:[],
       claimIndex:0,
+      claimScheduled:false,
       round:1,
       orders:orders,
       order:[],
