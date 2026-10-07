@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  BoostSystem,
   createCoreGame,
   createPirateQuizMap,
   RoundSystem,
@@ -16,6 +17,7 @@ import {
   BOOST_TYPES,
   GAME_STAGES,
   GAME_STAGE_SEQUENCE,
+  ISLAND_BOOST_TABLES,
   LEVEL_2_TERRITORIES,
   LEVEL_3_TERRITORIES,
   PLAYER_IDS,
@@ -392,6 +394,218 @@ test('ARCHIPELAGO allows a non-adjacent neutral island only when the player is c
   assert.equal(claim.usedCutOffRule, true);
 });
 
+test('island boost probability tables match Rules v0.3 exactly and total 100%', () => {
+  const expected = {
+    1: {
+      [BOOST_TYPES.EMPTY]: 45,
+      [BOOST_TYPES.SMALL_CHEST]: 20,
+      [BOOST_TYPES.REPAIR_KIT]: 15,
+      [BOOST_TYPES.TAILWIND]: 10,
+      [BOOST_TYPES.RECON]: 10,
+    },
+    2: {
+      [BOOST_TYPES.LARGE_CHEST]: 20,
+      [BOOST_TYPES.COMPASS]: 20,
+      [BOOST_TYPES.PARROT]: 15,
+      [BOOST_TYPES.POWDER_KEG]: 15,
+      [BOOST_TYPES.SPARE_ANCHOR]: 10,
+      [BOOST_TYPES.MERCENARY]: 10,
+      [BOOST_TYPES.EMPTY]: 10,
+    },
+    3: {
+      [BOOST_TYPES.SECRET_ROUTE]: 15,
+      [BOOST_TYPES.DOUBLE_VOLLEY]: 15,
+      [BOOST_TYPES.FORT_RESTORATION]: 15,
+      [BOOST_TYPES.BLACK_MARK]: 10,
+      [BOOST_TYPES.SECOND_CHANCE]: 10,
+      [BOOST_TYPES.SPYGLASS]: 10,
+      [BOOST_TYPES.TREASURE]: 15,
+      [BOOST_TYPES.CURSED_SKULL]: 10,
+    },
+  };
+
+  for (const level of [1, 2, 3]) {
+    const actual = Object.fromEntries(
+      ISLAND_BOOST_TABLES[level].map(entry => [entry.type, entry.weight]),
+    );
+    const total = ISLAND_BOOST_TABLES[level]
+      .reduce((sum, entry) => sum + entry.weight, 0);
+
+    assert.equal(total, 100);
+    assert.deepEqual(actual, expected[level]);
+  }
+});
+
+test('boost generator follows the configured percentages across deterministic percentile samples', () => {
+  for (const level of [1, 2, 3]) {
+    let sampleIndex = 0;
+    const boostSystem = new BoostSystem({
+      rng: () => ((sampleIndex++ % 100) + 0.5) / 100,
+    });
+    const counts = {};
+
+    for (let sample = 0; sample < 100; sample++) {
+      const boostType = boostSystem.generateForIslandLevel(level);
+      counts[boostType] = (counts[boostType] ?? 0) + 1;
+    }
+
+    for (const entry of ISLAND_BOOST_TABLES[level]) {
+      assert.equal(
+        counts[entry.type] ?? 0,
+        entry.weight,
+        `level ${level} / ${entry.type}`,
+      );
+    }
+  }
+});
+
+test('first neutral island capture generates a boost and stores it in player inventory', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    boostRng: () => 0.50,
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  game.archipelagoSystem.beginRound({
+    state: game.state,
+    correctAnswer: 100,
+    responses: responsesForRanking(['R', 'B', 'G', 'P']),
+  });
+
+  const before = game.boostSystem.getInventoryCount(
+    game.state,
+    'R',
+    BOOST_TYPES.SMALL_CHEST,
+  );
+
+  const claim = game.archipelagoSystem.claimTerritory({
+    state: game.state,
+    territoryId: 1,
+  });
+
+  assert.equal(claim.playerId, 'R');
+  assert.equal(claim.boostType, BOOST_TYPES.SMALL_CHEST);
+  assert.equal(claim.boostGranted, true);
+  assert.equal(game.state.territories.get(1).firstCaptureResolved, true);
+  assert.equal(
+    game.boostSystem.getInventoryCount(game.state, 'R', BOOST_TYPES.SMALL_CHEST),
+    before + 1,
+  );
+});
+
+test('EMPTY result still marks first capture as resolved and adds nothing to inventory', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    boostRng: () => 0.10,
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  const territory = game.state.territories.get(1);
+  const result = game.boostSystem.resolveTerritoryCapture({
+    state: game.state,
+    territoryId: 1,
+    playerId: 'R',
+    previousOwnerId: null,
+  });
+
+  assert.equal(result.generated, true);
+  assert.equal(result.granted, false);
+  assert.equal(result.boostType, BOOST_TYPES.EMPTY);
+  assert.equal(territory.firstCaptureResolved, true);
+  assert.equal(game.state.players.get('R').boosts[BOOST_TYPES.EMPTY], undefined);
+});
+
+test('boost is never generated again after island ownership changes', () => {
+  let rngCalls = 0;
+  const game = createCoreGame({
+    rng: fixedRng(),
+    boostRng: () => {
+      rngCalls += 1;
+      return 0.50;
+    },
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  const territory = game.state.territories.get(1);
+  const redBefore = game.boostSystem.getInventoryCount(
+    game.state,
+    'R',
+    BOOST_TYPES.SMALL_CHEST,
+  );
+  const blueBefore = game.boostSystem.getInventoryCount(
+    game.state,
+    'B',
+    BOOST_TYPES.SMALL_CHEST,
+  );
+
+  const first = game.boostSystem.resolveTerritoryCapture({
+    state: game.state,
+    territoryId: 1,
+    playerId: 'R',
+    previousOwnerId: null,
+  });
+  territory.ownerId = 'R';
+
+  assert.equal(first.generated, true);
+  assert.equal(rngCalls, 1);
+  assert.equal(
+    game.boostSystem.getInventoryCount(game.state, 'R', BOOST_TYPES.SMALL_CHEST),
+    redBefore + 1,
+  );
+
+  const previousOwnerId = territory.ownerId;
+  territory.ownerId = 'B';
+  const second = game.boostSystem.resolveTerritoryCapture({
+    state: game.state,
+    territoryId: 1,
+    playerId: 'B',
+    previousOwnerId,
+  });
+
+  assert.equal(second.generated, false);
+  assert.equal(second.granted, false);
+  assert.equal(second.boostType, null);
+  assert.equal(rngCalls, 1);
+  assert.equal(
+    game.boostSystem.getInventoryCount(game.state, 'R', BOOST_TYPES.SMALL_CHEST),
+    redBefore + 1,
+  );
+  assert.equal(
+    game.boostSystem.getInventoryCount(game.state, 'B', BOOST_TYPES.SMALL_CHEST),
+    blueBefore,
+  );
+  assert.equal(territory.ownerId, 'B');
+});
+
+test('even an erroneous second neutral-capture notification cannot generate a second boost', () => {
+  let rngCalls = 0;
+  const game = createCoreGame({
+    rng: fixedRng(),
+    boostRng: () => {
+      rngCalls += 1;
+      return 0.50;
+    },
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  game.boostSystem.resolveTerritoryCapture({
+    state: game.state,
+    territoryId: 1,
+    playerId: 'R',
+    previousOwnerId: null,
+  });
+
+  const duplicate = game.boostSystem.resolveTerritoryCapture({
+    state: game.state,
+    territoryId: 1,
+    playerId: 'B',
+    previousOwnerId: null,
+  });
+
+  assert.equal(duplicate.generated, false);
+  assert.equal(rngCalls, 1);
+});
+
 test('RoundSystem creates 8 rounds and every round contains each player exactly once', () => {
   const rounds = new RoundSystem({ rng: fixedRng() });
   const orders = rounds.createTurnOrders();
@@ -445,6 +659,7 @@ test('core modules have no direct browser UI dependency', () => {
     'entities/Ship.js',
     'map/Map.js',
     'systems/ArchipelagoSystem.js',
+    'systems/BoostSystem.js',
     'systems/RoundSystem.js',
     'systems/TurnSystem.js',
   ];

@@ -8,11 +8,13 @@ import { Ship } from './entities/Ship.js';
 import { createPirateQuizMap } from './map/Map.js';
 import { GameState } from './state/GameState.js';
 import { ArchipelagoSystem } from './systems/ArchipelagoSystem.js';
+import { BoostSystem } from './systems/BoostSystem.js';
 import { RoundSystem } from './systems/RoundSystem.js';
 import { TurnSystem } from './systems/TurnSystem.js';
 
 export {
   ArchipelagoSystem,
+  BoostSystem,
   GameState,
   Player,
   Ship,
@@ -23,6 +25,7 @@ export {
 
 export function createCoreGame({
   rng = Math.random,
+  boostRng = rng,
   territoryOwners = {},
   turnOrders = null,
   stage = GAME_STAGES.BASE_SELECTION,
@@ -60,12 +63,14 @@ export function createCoreGame({
     quizState,
   });
 
-  const archipelagoSystem = new ArchipelagoSystem({ map });
+  const boostSystem = new BoostSystem({ rng: boostRng });
+  const archipelagoSystem = new ArchipelagoSystem({ map, boostSystem });
   const turnSystem = new TurnSystem({ roundSystem });
 
   return {
     state,
     map,
+    boostSystem,
     archipelagoSystem,
     roundSystem,
     turnSystem,

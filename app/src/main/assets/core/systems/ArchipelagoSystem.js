@@ -5,6 +5,7 @@ import {
   GAME_STAGES,
   PLAYER_IDS,
 } from '../constants.js';
+import { BoostSystem } from './BoostSystem.js';
 
 function assertFiniteNumber(value, label) {
   if (!Number.isFinite(value)) throw new Error(`${label} must be a finite number`);
@@ -17,9 +18,10 @@ function countByPlayer(claims) {
 }
 
 export class ArchipelagoSystem {
-  constructor({ map }) {
+  constructor({ map, boostSystem = new BoostSystem() }) {
     if (!map) throw new Error('ArchipelagoSystem requires GameMap');
     this.map = map;
+    this.boostSystem = boostSystem;
   }
 
   assertArchipelagoStage(state) {
@@ -170,12 +172,21 @@ export class ArchipelagoSystem {
       throw new Error(`Territory ${id} cannot be claimed`);
     }
 
+    const boostResult = this.boostSystem.resolveTerritoryCapture({
+      state,
+      territoryId: id,
+      playerId,
+      previousOwnerId: territory.ownerId,
+    });
+
     territory.ownerId = playerId;
 
     const claim = {
       playerId,
       territoryId: id,
       usedCutOffRule: adjacent.length === 0,
+      boostType: boostResult.boostType,
+      boostGranted: boostResult.granted,
     };
 
     state.archipelagoState.claimedThisRound.push(claim);

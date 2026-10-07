@@ -33,7 +33,54 @@ export const GAME_STAGE_SEQUENCE = Object.freeze([
 ]);
 
 export const BOOST_TYPES = Object.freeze({
+  EMPTY: 'EMPTY',
+  SMALL_CHEST: 'SMALL_CHEST',
+  REPAIR_KIT: 'REPAIR_KIT',
+  TAILWIND: 'TAILWIND',
+  RECON: 'RECON',
+  LARGE_CHEST: 'LARGE_CHEST',
+  COMPASS: 'COMPASS',
+  PARROT: 'PARROT',
+  POWDER_KEG: 'POWDER_KEG',
+  SPARE_ANCHOR: 'SPARE_ANCHOR',
+  MERCENARY: 'MERCENARY',
   SECRET_ROUTE: 'SECRET_ROUTE',
+  DOUBLE_VOLLEY: 'DOUBLE_VOLLEY',
+  FORT_RESTORATION: 'FORT_RESTORATION',
+  BLACK_MARK: 'BLACK_MARK',
+  SECOND_CHANCE: 'SECOND_CHANCE',
+  SPYGLASS: 'SPYGLASS',
+  TREASURE: 'TREASURE',
+  CURSED_SKULL: 'CURSED_SKULL',
+});
+
+export const ISLAND_BOOST_TABLES = Object.freeze({
+  1: Object.freeze([
+    Object.freeze({ type: BOOST_TYPES.EMPTY, weight: 45 }),
+    Object.freeze({ type: BOOST_TYPES.SMALL_CHEST, weight: 20 }),
+    Object.freeze({ type: BOOST_TYPES.REPAIR_KIT, weight: 15 }),
+    Object.freeze({ type: BOOST_TYPES.TAILWIND, weight: 10 }),
+    Object.freeze({ type: BOOST_TYPES.RECON, weight: 10 }),
+  ]),
+  2: Object.freeze([
+    Object.freeze({ type: BOOST_TYPES.LARGE_CHEST, weight: 20 }),
+    Object.freeze({ type: BOOST_TYPES.COMPASS, weight: 20 }),
+    Object.freeze({ type: BOOST_TYPES.PARROT, weight: 15 }),
+    Object.freeze({ type: BOOST_TYPES.POWDER_KEG, weight: 15 }),
+    Object.freeze({ type: BOOST_TYPES.SPARE_ANCHOR, weight: 10 }),
+    Object.freeze({ type: BOOST_TYPES.MERCENARY, weight: 10 }),
+    Object.freeze({ type: BOOST_TYPES.EMPTY, weight: 10 }),
+  ]),
+  3: Object.freeze([
+    Object.freeze({ type: BOOST_TYPES.SECRET_ROUTE, weight: 15 }),
+    Object.freeze({ type: BOOST_TYPES.DOUBLE_VOLLEY, weight: 15 }),
+    Object.freeze({ type: BOOST_TYPES.FORT_RESTORATION, weight: 15 }),
+    Object.freeze({ type: BOOST_TYPES.BLACK_MARK, weight: 10 }),
+    Object.freeze({ type: BOOST_TYPES.SECOND_CHANCE, weight: 10 }),
+    Object.freeze({ type: BOOST_TYPES.SPYGLASS, weight: 10 }),
+    Object.freeze({ type: BOOST_TYPES.TREASURE, weight: 15 }),
+    Object.freeze({ type: BOOST_TYPES.CURSED_SKULL, weight: 10 }),
+  ]),
 });
 
 export const ARCHIPELAGO_ROUND_COUNT = 6;
