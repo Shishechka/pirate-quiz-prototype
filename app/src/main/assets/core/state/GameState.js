@@ -9,12 +9,23 @@ function createDefaultWarState() {
   };
 }
 
+function createDefaultArchipelagoState() {
+  return {
+    ranking: [],
+    claimQueue: [],
+    claimIndex: 0,
+    claimedThisRound: [],
+    completedRounds: [],
+  };
+}
+
 function createDefaultQuizState() {
   return {
     currentQuestion: null,
     questionType: null,
     context: null,
     responses: {},
+    ranking: [],
   };
 }
 
@@ -27,6 +38,7 @@ export class GameState {
     turnOrders = [],
     round = 1,
     turnIndex = 0,
+    archipelagoState = null,
     warState = null,
     quizState = null,
   }) {
@@ -40,6 +52,15 @@ export class GameState {
     this.round = round;
     this.turnIndex = turnIndex;
 
+    this.archipelagoState = {
+      ...createDefaultArchipelagoState(),
+      ...(archipelagoState ?? {}),
+      ranking: [...(archipelagoState?.ranking ?? [])],
+      claimQueue: [...(archipelagoState?.claimQueue ?? [])],
+      claimedThisRound: [...(archipelagoState?.claimedThisRound ?? [])],
+      completedRounds: [...(archipelagoState?.completedRounds ?? [])],
+    };
+
     this.warState = {
       ...createDefaultWarState(),
       ...(warState ?? {}),
@@ -52,6 +73,7 @@ export class GameState {
         ...createDefaultQuizState().responses,
         ...(quizState?.responses ?? {}),
       },
+      ranking: [...(quizState?.ranking ?? [])],
     };
   }
 

@@ -36,6 +36,10 @@ export const BOOST_TYPES = Object.freeze({
   SECRET_ROUTE: 'SECRET_ROUTE',
 });
 
+export const ARCHIPELAGO_ROUND_COUNT = 6;
+export const ARCHIPELAGO_TERRITORY_AWARDS = Object.freeze([2, 2, 1, 1]);
+export const ARCHIPELAGO_CLAIM_RANK_ORDER = Object.freeze([0, 1, 2, 3, 0, 1]);
+
 export const WAR_ROUND_COUNT = 8;
 export const TURNS_PER_ROUND = 4;
 export const TERRITORY_COUNT = 36;
