@@ -1,9 +1,9 @@
-name: Build Pirates v1.1
+name: Build Pirates Rules v0.4 APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, core/v0.2 ]
 
 jobs:
   build:
@@ -13,6 +13,37 @@ jobs:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run Core v0.2 tests
+        run: node --test app/src/main/assets/core/tests/*.test.js
+
+      - name: Rules v0.4 runtime source sanity
+        run: |
+          node --check app/src/main/assets/runtime_v0_4.js
+          python3 - <<'PY'
+          from pathlib import Path
+          index = Path("app/src/main/assets/index.html").read_text()
+          runtime = Path("app/src/main/assets/runtime_v0_4.js").read_text()
+          activity = Path("app/src/main/java/com/piratequiz/prototype/MainActivity.java").read_text()
+
+          assert 'type="module" src="runtime_v0_4.js"' in index
+          assert '<script src="game.js">' not in index
+          assert '<script src="ui_patch.js">' not in index
+          assert 'createCoreGame' in runtime
+          assert "RULES_VERSION" in runtime
+          assert "GAME_STAGES.ARCHIPELAGO" in runtime
+          assert "GAME_STAGES.PREPARATION" in runtime
+          assert "GAME_STAGES.WAR" in runtime
+          assert "previewActiveQuestionOutcome" in runtime
+          assert "commitActiveQuestionResult" in runtime
+          assert "https://" in activity and "appassets.local" in activity
+          assert "shouldInterceptRequest" in activity
+          print("Rules v0.4 runtime sanity: OK")
+          PY
 
       - uses: actions/setup-java@v5
         with:
@@ -31,29 +62,6 @@ jobs:
           base64 -d ci/pirates-v1.keystore.b64 > ci/pirates-v1.keystore
           keytool -list -keystore ci/pirates-v1.keystore -storepass piratesv1 -alias piratesdebug >/dev/null
 
-      - name: Pirates v1.1 source sanity
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          game=Path("app/src/main/assets/game.js").read_text()
-          ui=Path("app/src/main/assets/ui_patch.js").read_text()
-          index=Path("app/src/main/assets/index.html").read_text()
-          visual=Path("app/src/main/assets/v1_1_visual_patch.js").read_text()
-          assert "for(let i=1;i<=36;i++)" in game
-          assert "Array.from({length:8}" in ui
-          assert "for(var r=0;r<8;r++)" in ui
-          assert "S.orders[r].forEach" in ui
-          assert "marks.every(n=>n===4)" in visual
-          assert "totalMarks===32" in visual
-          assert "contentBounds()" in ui and "usableRect()" in ui
-          assert "v1_1_visual_patch.js" in index
-          assert "v1_visual_patch.js" not in index
-          assert ".mapControls{display:none" in visual
-          assert "#homeBtn{display:none" in visual
-          assert "MAP_SVG" in visual and "ARTS={" in visual
-          print("Pirates v1.1 source sanity: OK")
-          PY
-
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
@@ -68,11 +76,9 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")
           echo "$BADGING" | grep "package: name='com.piratequiz.prototype'"
-          echo "$BADGING" | grep "versionCode='2'"
-          echo "$BADGING" | grep "versionName='1.1.0'"
-          cp "$APK" "Pirates-v1.1.apk"
+          cp "$APK" "Pirates-Rules-v0.4-Core-v0.2.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Pirates-v1.1
-          path: Pirates-v1.1.apk
+          name: Pirates-Rules-v0.4-Core-v0.2
+          path: Pirates-Rules-v0.4-Core-v0.2.apk
