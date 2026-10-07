@@ -63,6 +63,21 @@ function createBasicWarGame({
   });
 }
 
+function createBaseWarGame() {
+  const territoryOwners = {};
+  for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
+
+  // Preserve several defender territories so base capture can prove they do not transfer.
+  for (const id of [6, 12, 18]) territoryOwners[id] = 'B';
+
+  return createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.WAR,
+    territoryOwners,
+    turnOrders: warTurnOrders(),
+  });
+}
+
 function completeArchipelagoRound(game, ranking = PLAYER_IDS) {
   const correctAnswer = 100;
   const started = game.archipelagoSystem.beginRound({
@@ -1246,6 +1261,256 @@ test('equal numeric duel distance remains explicitly unresolved', () => {
 
   assert.equal(game.state.territories.get(2).ownerId, 'B');
   assert.equal(game.state.warState.battleHistory.length, 0);
+});
+
+test('base starts with Fort, Harbor and Captain Flag active', () => {
+  const game = createBaseWarGame();
+  const base = game.state.bases.get('B');
+
+  assert.deepEqual(base.layers, {
+    fort: 'ACTIVE',
+    harbor: 'ACTIVE',
+    flag: 'ACTIVE',
+  });
+  assert.equal(base.currentLayer, 'fort');
+  assert.equal(base.remainingLayers, 3);
+  assert.equal(base.isCaptured, false);
+});
+
+test('base assault destroys Fort first', () => {
+  const game = createBaseWarGame();
+  const base = game.state.bases.get('B');
+
+  const result = game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  assert.equal(result.targetLayer, 'fort');
+  assert.equal(result.destroyedLayer, 'fort');
+  assert.equal(result.primaryQuestionType, 'MULTIPLE_CHOICE_4');
+  assert.equal(result.numericDuelUsed, false);
+  assert.deepEqual(base.layers, {
+    fort: 'DESTROYED',
+    harbor: 'ACTIVE',
+    flag: 'ACTIVE',
+  });
+  assert.equal(base.currentLayer, 'harbor');
+  assert.equal(base.remainingLayers, 2);
+  assert.equal(base.capturedBy, null);
+});
+
+test('base assault destroys Harbor only after Fort is destroyed', () => {
+  const game = createBaseWarGame();
+  const base = game.state.bases.get('B');
+
+  game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  const result = game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  assert.equal(result.targetLayer, 'harbor');
+  assert.equal(result.destroyedLayer, 'harbor');
+  assert.deepEqual(base.layers, {
+    fort: 'DESTROYED',
+    harbor: 'DESTROYED',
+    flag: 'ACTIVE',
+  });
+  assert.equal(base.currentLayer, 'flag');
+  assert.equal(base.remainingLayers, 1);
+});
+
+test('destroying Captain Flag fully captures the base without ending WAR', () => {
+  const game = createBaseWarGame();
+  const base = game.state.bases.get('B');
+
+  for (let level = 0; level < 2; level++) {
+    game.combatSystem.resolveBaseBattle({
+      state: game.state,
+      attackerId: 'R',
+      targetBaseId: 'B',
+      attackerCorrect: true,
+      defenderCorrect: false,
+    });
+  }
+
+  const result = game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  assert.equal(result.targetLayer, 'flag');
+  assert.equal(result.destroyedLayer, 'flag');
+  assert.equal(result.baseCaptured, true);
+  assert.deepEqual(base.layers, {
+    fort: 'DESTROYED',
+    harbor: 'DESTROYED',
+    flag: 'DESTROYED',
+  });
+  assert.equal(base.remainingLayers, 0);
+  assert.equal(base.currentLayer, null);
+  assert.equal(base.capturedBy, 'R');
+  assert.equal(game.state.stage, GAME_STAGES.WAR);
+  assert.equal(game.state.finished, false);
+});
+
+test('base damage persists when defender wins a later level', () => {
+  const game = createBaseWarGame();
+  const base = game.state.bases.get('B');
+
+  game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  const defense = game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: false,
+    defenderCorrect: true,
+  });
+
+  assert.equal(defense.targetLayer, 'harbor');
+  assert.equal(defense.destroyedLayer, null);
+  assert.equal(defense.winnerId, 'B');
+  assert.deepEqual(base.layers, {
+    fort: 'DESTROYED',
+    harbor: 'ACTIVE',
+    flag: 'ACTIVE',
+  });
+  assert.equal(base.currentLayer, 'harbor');
+  assert.equal(base.remainingLayers, 2);
+});
+
+test('repeated base assault resumes from the first surviving level', () => {
+  const game = createBaseWarGame();
+  const base = game.state.bases.get('B');
+
+  game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: false,
+    defenderCorrect: false,
+  });
+
+  const repeatedAssault = game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  assert.equal(repeatedAssault.targetLayer, 'harbor');
+  assert.equal(repeatedAssault.destroyedLayer, 'harbor');
+  assert.equal(base.currentLayer, 'flag');
+});
+
+test('base assault uses numeric duel when both players answer the 4-option question correctly', () => {
+  const game = createBaseWarGame();
+
+  const result = game.combatSystem.resolveBaseBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetBaseId: 'B',
+    attackerCorrect: true,
+    defenderCorrect: true,
+    numericDuel: {
+      correctAnswer: 100,
+      attackerAnswer: 101,
+      defenderAnswer: 104,
+    },
+  });
+
+  assert.equal(result.targetLayer, 'fort');
+  assert.equal(result.destroyedLayer, 'fort');
+  assert.equal(result.numericDuelUsed, true);
+  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_ATTACKER_CLOSER');
+});
+
+test('capturing a base keeps defender in game and preserves all defender territories', () => {
+  const game = createBaseWarGame();
+  const defenderTerritoriesBefore = [...game.state.territories.values()]
+    .filter(territory => territory.ownerId === 'B')
+    .map(territory => territory.id)
+    .sort((a, b) => a - b);
+
+  for (let level = 0; level < 3; level++) {
+    game.combatSystem.resolveBaseBattle({
+      state: game.state,
+      attackerId: 'R',
+      targetBaseId: 'B',
+      attackerCorrect: true,
+      defenderCorrect: false,
+    });
+  }
+
+  const defenderTerritoriesAfter = [...game.state.territories.values()]
+    .filter(territory => territory.ownerId === 'B')
+    .map(territory => territory.id)
+    .sort((a, b) => a - b);
+
+  assert.equal(game.state.players.has('B'), true);
+  assert.deepEqual(defenderTerritoriesAfter, defenderTerritoriesBefore);
+  assert.equal(game.state.bases.get('B').ownerId, 'B');
+  assert.equal(game.state.bases.get('B').capturedBy, 'R');
+  assert.equal(game.state.finished, false);
+});
+
+test('captured base cannot be assaulted again', () => {
+  const game = createBaseWarGame();
+
+  for (let level = 0; level < 3; level++) {
+    game.combatSystem.resolveBaseBattle({
+      state: game.state,
+      attackerId: 'R',
+      targetBaseId: 'B',
+      attackerCorrect: true,
+      defenderCorrect: false,
+    });
+  }
+
+  assert.equal(game.combatSystem.canAttackBase(game.state, 'R', 'B'), false);
+  assert.throws(
+    () => game.combatSystem.resolveBaseBattle({
+      state: game.state,
+      attackerId: 'R',
+      targetBaseId: 'B',
+      attackerCorrect: true,
+      defenderCorrect: false,
+    }),
+    /already captured/,
+  );
 });
 
 test('RoundSystem creates 8 rounds and every round contains each player exactly once', () => {

@@ -24,6 +24,33 @@ export class CombatSystem {
       .sort((a, b) => a - b);
   }
 
+  getBaseAttackSources(state, attackerId, baseId) {
+    return [...state.territories.values()]
+      .filter(territory => (
+        territory.ownerId === attackerId
+        && this.map.areAdjacent(territory.id, String(baseId))
+      ))
+      .map(territory => territory.id)
+      .sort((a, b) => a - b);
+  }
+
+  canAttackBase(state, attackerId, baseId) {
+    if (state.stage !== GAME_STAGES.WAR) return false;
+    if (!state.players.has(attackerId)) return false;
+    if (state.currentPlayerId !== attackerId) return false;
+
+    const neutralExists = [...state.territories.values()]
+      .some(territory => territory.ownerId == null);
+    if (neutralExists) return false;
+
+    const base = state.bases.get(String(baseId));
+    if (!base) return false;
+    if (base.ownerId === attackerId) return false;
+    if (base.isCaptured) return false;
+
+    return this.getBaseAttackSources(state, attackerId, baseId).length > 0;
+  }
+
   canAttackTerritory(state, attackerId, targetTerritoryId) {
     if (state.stage !== GAME_STAGES.WAR) return false;
     if (!state.players.has(attackerId)) return false;
@@ -154,6 +181,86 @@ export class CombatSystem {
       attackSources,
       winnerId,
       previousOwnerId,
+      result: outcome.reason,
+    };
+
+    state.warState.battleHistory.push(battle);
+
+    return { ...battle };
+  }
+
+  resolveBaseBattle({
+    state,
+    attackerId,
+    targetBaseId,
+    attackerCorrect,
+    defenderCorrect,
+    numericDuel = null,
+  }) {
+    if (state.stage !== GAME_STAGES.WAR) {
+      throw new Error('Base battle can only be resolved during WAR');
+    }
+
+    const neutral = [...state.territories.values()]
+      .filter(territory => territory.ownerId == null);
+
+    if (neutral.length > 0) {
+      throw new Error('WAR cannot contain neutral territories');
+    }
+
+    if (state.currentPlayerId !== attackerId) {
+      throw new Error(`It is not ${attackerId}'s turn`);
+    }
+
+    const base = state.bases.get(String(targetBaseId));
+    if (!base) throw new Error(`Unknown base: ${targetBaseId}`);
+    if (base.ownerId === attackerId) throw new Error('Cannot attack own base');
+    if (base.isCaptured) throw new Error('Cannot attack an already captured base');
+
+    const attackSources = this.getBaseAttackSources(state, attackerId, targetBaseId);
+    if (attackSources.length === 0) {
+      throw new Error('Base is not connected by a sea route to attacker territory');
+    }
+
+    const targetLayer = base.currentLayer;
+    if (targetLayer == null) {
+      throw new Error(`Base ${base.id} has no active defense layer`);
+    }
+
+    const defenderId = base.ownerId;
+    const outcome = this.resolveQuizOutcome({
+      attackerCorrect,
+      defenderCorrect,
+      numericDuel,
+    });
+
+    let destroyedLayer = null;
+    if (outcome.winnerSide === 'ATTACKER') {
+      destroyedLayer = base.destroyCurrentLayer();
+      if (destroyedLayer === 'flag') {
+        base.capturedBy = attackerId;
+      }
+    }
+
+    const winnerId = outcome.winnerSide === 'ATTACKER'
+      ? attackerId
+      : defenderId;
+
+    const battle = {
+      battleId: state.warState.battleHistory.length + 1,
+      round: state.round,
+      turnIndex: state.turnIndex,
+      targetType: 'BASE',
+      attackerId,
+      defenderId,
+      targetBaseId: base.id,
+      targetLayer,
+      attackSources,
+      winnerId,
+      destroyedLayer,
+      baseCaptured: base.isCaptured,
+      primaryQuestionType: 'MULTIPLE_CHOICE_4',
+      numericDuelUsed: attackerCorrect && defenderCorrect,
       result: outcome.reason,
     };
 
