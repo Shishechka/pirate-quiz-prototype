@@ -72,13 +72,18 @@ function createBaseWarGame() {
   // Preserve several defender territories so base capture can prove they do not transfer.
   for (const id of [6, 12, 18]) territoryOwners[id] = 'B';
 
-  return createCoreGame({
+  const game = createCoreGame({
     baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.WAR,
     territoryOwners,
     turnOrders: warTurnOrders(),
   });
+
+  // Base-layer tests isolate Fort/Harbor/Flag. A separate Rules v0.4 test
+  // covers the mandatory Defending Flagship stage.
+  game.state.players.get('B').ship.pos = 6;
+  return game;
 }
 
 function completeArchipelagoRound(game, ranking = PLAYER_IDS) {
