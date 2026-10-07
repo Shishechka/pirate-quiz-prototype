@@ -1,6 +1,23 @@
 'use strict';
 (function(){
   const nativeRandom=Math.random.bind(Math);
+  const FIXED_START={
+    R:[1,2,3,4,7,8,10,13,14],
+    B:[5,6,9,11,12,15,16,17,18],
+    G:[19,20,21,22,25,31,32,33,34],
+    P:[23,24,26,27,28,29,30,35,36]
+  };
+  const FIXED_START_FAME_BONUS={R:0,B:0,G:1,P:1};
+  function fixedOwners(){
+    const own={};
+    Object.entries(FIXED_START).forEach(([p,ids])=>ids.forEach(id=>own[id]=p));
+    return own;
+  }
+  const rawFame=fame;
+  fame=function(p){
+    const bonus=S&&S.startFameBonus?(S.startFameBonus[p]||0):0;
+    return rawFame(p)+bonus;
+  };
   let activeSeed=0,activeRng=null,activeAttackKey=null,activeAttackContext=null;
 
   function toSeed(value){
@@ -44,6 +61,7 @@
       startedAt:new Date().toISOString(),
       rules:{
         rounds:8,islandCoinReward:10,baseFlagFame:9,hpCost:20,dmgCost:30,
+        fixedWarStart:true,startTerritoriesPerPlayer:9,startEffectiveFame:16,
         destroyedFlagship:'returns to own base at 0 HP and cannot move/support until repaired to at least 1 HP'
       },
       startOwners:Object.assign({},owners),
@@ -72,11 +90,11 @@
     const seed=seedArg==null?freshSeed():toSeed(seedArg);
     installSeed(seed);
     const orders=Array.from({length:8},()=>shuffle(PLAYERS));
-    const owners=initialOwners();
+    const owners=fixedOwners();
     S={
       round:1,orders:orders,order:orders[0],idx:0,owners:owners,
       bases:{A:3,B:3,C:3,D:3},captured:{A:null,B:null,C:null,D:null},
-      players:{},finished:false,seed:seed
+      players:{},finished:false,seed:seed,startFameBonus:Object.assign({},FIXED_START_FAME_BONUS)
     };
     PLAYERS.forEach(p=>{
       S.players[p]={coins:20,flags:0,ship:{hp:3,maxHp:3,dmg:1,pos:BASE[p],sunk:false},secret:1};
@@ -86,7 +104,7 @@
     activeAttackKey=null;activeAttackContext=null;
     $('log').innerHTML='';
     hideFinal();
-    log('Баланс-тест · seed '+seed+'. Порядок ходов на 8 раундов зафиксирован.');
+    log('Баланс-тест · фиксированный старт войны · 9 островов и 16 эффективной славы каждому · seed '+seed+'.');
     render();
     if(window.resetMapView)window.resetMapView();
     advanceUntilHuman();
@@ -126,7 +144,7 @@
     });
 
     const badge=document.getElementById('balanceSeedBadge');
-    if(badge)badge.textContent='TEST · seed '+S.seed;
+    if(badge)badge.textContent='TEST · FIXED START · seed '+S.seed;
   };
 
   canUpgrade=function(kind){
@@ -330,7 +348,7 @@
     });
     return {
       version:S.metrics.version,seed:S.seed,startedAt:S.metrics.startedAt,endedAt:new Date().toISOString(),
-      rules:S.metrics.rules,startOwners:S.metrics.startOwners,roundOrders:S.metrics.roundOrders,
+      rules:S.metrics.rules,startOwners:S.metrics.startOwners,startFameBonus:Object.assign({},S.startFameBonus),roundOrders:S.metrics.roundOrders,
       stats:S.metrics.byPlayer,human:S.metrics.human,final:final,
       finalBases:Object.assign({},S.bases),captured:Object.assign({},S.captured),
       events:S.metrics.events
