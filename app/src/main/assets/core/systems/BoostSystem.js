@@ -3,6 +3,7 @@ import {
   GAME_STAGES,
   ISLAND_BOOST_TABLES,
 } from '../constants.js';
+import { BASE_LAYER_STATUS } from '../entities/Base.js';
 
 function getTable(level) {
   const table = ISLAND_BOOST_TABLES[level];
@@ -87,21 +88,29 @@ export class BoostSystem {
     state.players.get(playerId).boosts[boostType] = count - 1;
   }
 
-  assertOwnWarTurnBoostAvailable(state, playerId) {
-    if (state.stage !== GAME_STAGES.WAR || state.currentPlayerId !== playerId) {
-      throw new Error('This boost must be used during the player own WAR turn');
+  hasPlayerUsedBoost(state, playerId) {
+    if (!state.players.has(playerId)) throw new Error(`Unknown player: ${playerId}`);
+    return state.warState.boostUsedByPlayer[playerId] != null;
+  }
+
+  assertPlayerWarBoostAvailable(state, playerId) {
+    if (state.stage !== GAME_STAGES.WAR) {
+      throw new Error('This boost requires WAR stage');
     }
-    if (state.warState.turnBoostUsed) {
-      throw new Error('Only one boost can be used per WAR turn');
+    if (this.hasPlayerUsedBoost(state, playerId)) {
+      throw new Error('Only one boost per player can be used during the current WAR turn');
+    }
+  }
+
+  assertOwnWarTurnBoostAvailable(state, playerId) {
+    this.assertPlayerWarBoostAvailable(state, playerId);
+    if (state.currentPlayerId !== playerId) {
+      throw new Error('This boost must be used during the player own WAR turn');
     }
   }
 
   markTurnBoostUsed(state, playerId, boostType) {
-    state.warState.turnBoostUsed = true;
-    state.warState.selectedTurnBoost = {
-      playerId,
-      boostType,
-    };
+    state.warState.boostUsedByPlayer[playerId] = boostType;
   }
 
   prepareAttackBoost({ state, playerId, boostType }) {
@@ -115,6 +124,10 @@ export class BoostSystem {
 
     this.consumeFromInventory(state, playerId, boostType);
     this.markTurnBoostUsed(state, playerId, boostType);
+    state.warState.selectedTurnBoost = {
+      playerId,
+      boostType,
+    };
 
     return { ...state.warState.selectedTurnBoost };
   }
@@ -127,6 +140,22 @@ export class BoostSystem {
   }) {
     if ([BOOST_TYPES.RECON, BOOST_TYPES.SECRET_ROUTE, BOOST_TYPES.DOUBLE_VOLLEY].includes(boostType)) {
       return this.prepareAttackBoost({ state, playerId, boostType });
+    }
+
+    if (boostType === BOOST_TYPES.SECOND_CHANCE) {
+      this.assertPlayerWarBoostAvailable(state, playerId);
+      const attack = state.warState.activeAttack;
+      if (!attack || attack.pendingQuestionResult?.loserId !== playerId) {
+        throw new Error('Second Chance requires a lost result that has not been committed yet');
+      }
+      this.consumeFromInventory(state, playerId, boostType);
+      attack.phase = 'QUESTION';
+      attack.questionType = 'MULTIPLE_CHOICE_4';
+      attack.responses = {};
+      attack.pendingQuestionResult = null;
+      attack.secondChanceUsedBy = playerId;
+      this.markTurnBoostUsed(state, playerId, boostType);
+      return { boostType, replayQuestion: true };
     }
 
     if (state.stage === GAME_STAGES.WAR) {
@@ -195,6 +224,9 @@ export class BoostSystem {
       const base = state.bases.get(player.baseId);
       if (!base?.isActiveBase || base.ownerId !== playerId) {
         throw new Error('Fort Restoration requires the player active own base');
+      }
+      if (base.layers.fort !== BASE_LAYER_STATUS.DESTROYED) {
+        throw new Error('Fort Restoration cannot be used while Fort is intact');
       }
       this.consumeFromInventory(state, playerId, boostType);
       base.restoreFort();
