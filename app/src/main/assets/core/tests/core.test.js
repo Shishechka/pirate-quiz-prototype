@@ -26,6 +26,7 @@ import {
   ISLAND_BOOST_TABLES,
   LEVEL_2_TERRITORIES,
   LEVEL_3_TERRITORIES,
+  PLAYER_BASES,
   PLAYER_IDS,
   TERRITORY_COUNT,
   WAR_ROUND_COUNT,
@@ -56,6 +57,7 @@ function createBasicWarGame({
   territoryOwners[targetTerritoryId] = defenderId;
 
   return createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.WAR,
     territoryOwners,
@@ -71,6 +73,7 @@ function createBaseWarGame() {
   for (const id of [6, 12, 18]) territoryOwners[id] = 'B';
 
   return createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.WAR,
     territoryOwners,
@@ -106,7 +109,8 @@ function completeArchipelagoRound(game, ranking = PLAYER_IDS) {
 }
 
 test('GameState is created with the complete central game state', () => {
-  const { state } = createCoreGame({ rng: fixedRng() });
+  const { state } = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(state.stage, GAME_STAGES.BASE_SELECTION);
   assert.equal(state.round, 1);
@@ -144,13 +148,21 @@ test('GameState is created with the complete central game state', () => {
     claimIndex: 0,
     claimedThisRound: [],
     completedRounds: [],
+    pendingRankedResponses: [],
+    pendingTieGroups: [],
   });
   assert.deepEqual(state.economyState, {
     transactions: [],
     nextTransactionId: 1,
   });
+  assert.deepEqual(state.fameState, {
+    events: [],
+    nextEventId: 1,
+  });
   assert.deepEqual(state.preparationState, {
     readyPlayerIds: [],
+    startedAtMs: null,
+    deadlineAtMs: null,
   });
   assert.deepEqual(state.warState, {
     activeAttack: null,
@@ -161,6 +173,11 @@ test('GameState is created with the complete central game state', () => {
       G: 0,
       P: 0,
     },
+    turnActionUsed: false,
+    turnBoostUsed: false,
+    selectedTurnBoost: null,
+    blackMarks: [],
+    tiebreak: null,
   });
   assert.deepEqual(state.quizState, {
     currentQuestion: null,
@@ -168,12 +185,18 @@ test('GameState is created with the complete central game state', () => {
     context: null,
     responses: {},
     ranking: [],
+    deadlineAtMs: null,
+    lockedPlayerIds: [],
+  });
+  assert.deepEqual(state.resultState, {
+    winnerIds: [],
   });
   assert.equal(state.finished, false);
 });
 
 test('GameState supports the declared basic stage states without UI dependency', () => {
-  const { state } = createCoreGame({ rng: fixedRng() });
+  const { state } = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   for (const stage of GAME_STAGE_SEQUENCE) {
     state.stage = stage;
@@ -185,7 +208,8 @@ test('GameState supports the declared basic stage states without UI dependency',
 });
 
 test('GameState rejects unknown stage values', () => {
-  const { state } = createCoreGame({ rng: fixedRng() });
+  const { state } = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.throws(
     () => {
@@ -195,13 +219,15 @@ test('GameState rejects unknown stage values', () => {
   );
 
   assert.throws(
-    () => createCoreGame({ rng: fixedRng(), stage: 'UNKNOWN_STAGE' }),
+    () => createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng(), stage: 'UNKNOWN_STAGE' }),
     /Unknown game stage/,
   );
 });
 
 test('legacy finished flag remains compatible with FINISHED stage', () => {
   const { state } = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.WAR,
   });
@@ -213,7 +239,8 @@ test('legacy finished flag remains compatible with FINISHED stage', () => {
 });
 
 test('player boost state has one source of truth with legacy secret alias', () => {
-  const { state } = createCoreGame({ rng: fixedRng() });
+  const { state } = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
   const red = state.players.get('R');
 
   assert.equal(red.secret, 1);
@@ -226,7 +253,8 @@ test('player boost state has one source of truth with legacy secret alias', () =
 });
 
 test('core creates exactly 4 players with legacy player ids and bases', () => {
-  const { state } = createCoreGame({ rng: fixedRng() });
+  const { state } = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(state.players.size, 4);
   assert.deepEqual([...state.players.keys()], PLAYER_IDS);
@@ -281,6 +309,7 @@ test('base connections match legacy map topology', () => {
 
 test('ARCHIPELAGO numeric question requires all 4 responses and ranks by absolute error', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -304,29 +333,43 @@ test('ARCHIPELAGO numeric question requires all 4 responses and ranks by absolut
   assert.equal(game.state.quizState.context, GAME_STAGES.ARCHIPELAGO);
 });
 
-test('ARCHIPELAGO does not invent a tie-break rule for equal numeric errors', () => {
+test('ARCHIPELAGO uses an additional numeric question for equal error and equal time', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
 
-  assert.throws(
-    () => game.archipelagoSystem.beginRound({
-      state: game.state,
-      correctAnswer: 100,
-      responses: {
-        R: 99,
-        B: 101,
-        G: 103,
-        P: 105,
-      },
-    }),
-    /tie is unresolved/,
-  );
+  const tied = game.archipelagoSystem.beginRound({
+    state: game.state,
+    correctAnswer: 100,
+    responses: {
+      R: { value: 99, elapsedMs: 1000 },
+      B: { value: 101, elapsedMs: 1000 },
+      G: { value: 103, elapsedMs: 2000 },
+      P: { value: 105, elapsedMs: 3000 },
+    },
+  });
+
+  assert.equal(tied.requiresTieBreak, true);
+  assert.deepEqual(tied.tiedPlayerIds, ['R', 'B']);
+
+  const resolved = game.archipelagoSystem.resolveTieBreak({
+    state: game.state,
+    correctAnswer: 50,
+    responses: {
+      R: { value: 49, elapsedMs: 1000 },
+      B: { value: 52, elapsedMs: 500 },
+    },
+  });
+
+  assert.equal(resolved.requiresTieBreak, false);
+  assert.deepEqual(resolved.ranking, ['R', 'B', 'G', 'P']);
 });
 
 test('each ARCHIPELAGO round distributes exactly 6 territories', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -344,6 +387,7 @@ test('each ARCHIPELAGO round distributes exactly 6 territories', () => {
 
 test('ARCHIPELAGO awards territories 2/2/1/1 according to numeric ranking', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -362,6 +406,7 @@ test('ARCHIPELAGO awards territories 2/2/1/1 according to numeric ranking', () =
 
 test('after 6 ARCHIPELAGO rounds exactly all 36 territories are distributed', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -381,6 +426,7 @@ test('after 6 ARCHIPELAGO rounds exactly all 36 territories are distributed', ()
 
 test('after 6 ARCHIPELAGO rounds no neutral territories remain', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -394,6 +440,7 @@ test('after 6 ARCHIPELAGO rounds no neutral territories remain', () => {
 
 test('ARCHIPELAGO forbids a non-adjacent island while the player has adjacent neutral islands', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -431,6 +478,7 @@ test('ARCHIPELAGO forbids a non-adjacent island while the player has adjacent ne
 
 test('ARCHIPELAGO allows a non-adjacent neutral island only when the player is cut off', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -458,13 +506,12 @@ test('ARCHIPELAGO allows a non-adjacent neutral island only when the player is c
   assert.equal(claim.usedCutOffRule, true);
 });
 
-test('island boost probability tables match Rules v0.3 exactly and total 100%', () => {
+test('island boost probability tables match Rules v0.4 exactly and total 100%', () => {
   const expected = {
     1: {
-      [BOOST_TYPES.EMPTY]: 45,
+      [BOOST_TYPES.EMPTY]: 55,
       [BOOST_TYPES.SMALL_CHEST]: 20,
       [BOOST_TYPES.REPAIR_KIT]: 15,
-      [BOOST_TYPES.TAILWIND]: 10,
       [BOOST_TYPES.RECON]: 10,
     },
     2: {
@@ -525,8 +572,9 @@ test('boost generator follows the configured percentages across deterministic pe
 
 test('first neutral island capture generates a boost and stores it in player inventory', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
-    boostRng: () => 0.50,
+    boostRng: () => 0.60,
     stage: GAME_STAGES.ARCHIPELAGO,
   });
 
@@ -559,6 +607,7 @@ test('first neutral island capture generates a boost and stores it in player inv
 
 test('EMPTY result still marks first capture as resolved and adds nothing to inventory', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     boostRng: () => 0.10,
     stage: GAME_STAGES.ARCHIPELAGO,
@@ -582,10 +631,11 @@ test('EMPTY result still marks first capture as resolved and adds nothing to inv
 test('boost is never generated again after island ownership changes', () => {
   let rngCalls = 0;
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     boostRng: () => {
       rngCalls += 1;
-      return 0.50;
+      return 0.60;
     },
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -644,10 +694,11 @@ test('boost is never generated again after island ownership changes', () => {
 test('even an erroneous second neutral-capture notification cannot generate a second boost', () => {
   let rngCalls = 0;
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     boostRng: () => {
       rngCalls += 1;
-      return 0.50;
+      return 0.60;
     },
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -671,7 +722,8 @@ test('even an erroneous second neutral-capture notification cannot generate a se
 });
 
 test('EconomySystem exposes current player dubloon balance without duplicating it', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(game.economySystem.getBalance(game.state, 'R'), 20);
   assert.equal(
@@ -681,7 +733,8 @@ test('EconomySystem exposes current player dubloon balance without duplicating i
 });
 
 test('EconomySystem supports +10, +20 and +30 dubloon income', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
   let expectedBalance = 20;
 
   for (const amount of DUBLOON_INCOME_AMOUNTS) {
@@ -701,7 +754,8 @@ test('EconomySystem supports +10, +20 and +30 dubloon income', () => {
 });
 
 test('EconomySystem spends dubloons and checks sufficient funds', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(game.economySystem.canAfford(game.state, 'R', 20), true);
   assert.equal(game.economySystem.canAfford(game.state, 'R', 30), false);
@@ -720,7 +774,8 @@ test('EconomySystem spends dubloons and checks sufficient funds', () => {
 });
 
 test('EconomySystem never changes balance when a spend cannot be afforded', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
   const before = game.economySystem.getBalance(game.state, 'R');
 
   assert.throws(
@@ -745,7 +800,8 @@ test('default economy prices match the approved Pirate Quiz values', () => {
     [ECONOMY_PRICE_KEYS.CREW_MEMBER]: 20,
   });
 
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(
     game.economySystem.getPrice(ECONOMY_PRICE_KEYS.SHIP_HP_UPGRADE),
@@ -787,7 +843,8 @@ test('economy prices are configurable without changing the default config', () =
 });
 
 test('EconomySystem can spend a configured price without applying purchase effects', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(
     game.economySystem.canAffordPrice(
@@ -812,7 +869,8 @@ test('EconomySystem can spend a configured price without applying purchase effec
 });
 
 test('EconomySystem records deterministic transaction history and reasons', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   game.economySystem.credit({
     state: game.state,
@@ -852,8 +910,9 @@ test('EconomySystem records deterministic transaction history and reasons', () =
   assert.equal(game.state.economyState.nextTransactionId, 3);
 });
 
-test('flagship starts with Rules v0.3 base characteristics', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+test('flagship starts with Rules v0.4 base characteristics', () => {
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
   const ship = game.flagshipSystem.getFlagship(game.state, 'R');
 
   assert.equal(ship.hp, 3);
@@ -869,7 +928,8 @@ test('flagship starts with Rules v0.3 base characteristics', () => {
 });
 
 test('buying +1 HP costs 20 dubloons and increases current and maximum HP', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(game.flagshipSystem.canPurchaseHpUpgrade(game.state, 'R'), true);
 
@@ -888,7 +948,8 @@ test('buying +1 HP costs 20 dubloons and increases current and maximum HP', () =
 });
 
 test('buying +1 Damage costs 30 dubloons and increases damage by one', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   game.economySystem.credit({
     state: game.state,
@@ -911,7 +972,8 @@ test('buying +1 Damage costs 30 dubloons and increases damage by one', () => {
 });
 
 test('buying +1 Crew Slot costs 30 dubloons and increases capacity by one', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   game.economySystem.credit({
     state: game.state,
@@ -934,7 +996,8 @@ test('buying +1 Crew Slot costs 30 dubloons and increases capacity by one', () =
 });
 
 test('flagship upgrades cannot spend more dubloons than the player has', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
   const ship = game.flagshipSystem.getFlagship(game.state, 'R');
   const before = {
     balance: game.economySystem.getBalance(game.state, 'R'),
@@ -963,7 +1026,8 @@ test('flagship upgrades cannot spend more dubloons than the player has', () => {
 });
 
 test('flagship stores installed crew and enforces available crew slots only', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
 
   assert.equal(game.flagshipSystem.canInstallCrew(game.state, 'R'), true);
 
@@ -990,7 +1054,8 @@ test('flagship stores installed crew and enforces available crew slots only', ()
 });
 
 test('destruction and return state is not changed by flagship upgrade purchases', () => {
-  const game = createCoreGame({ rng: fixedRng() });
+  const game = createCoreGame({
+    baseAssignments: PLAYER_BASES, rng: fixedRng() });
   const ship = game.flagshipSystem.getFlagship(game.state, 'R');
 
   ship.sunk = true;
@@ -1007,6 +1072,7 @@ test('destruction and return state is not changed by flagship upgrade purchases'
 
 test('Stage 2 completion transitions to PREPARATION only after all 36 islands are owned', () => {
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.ARCHIPELAGO,
   });
@@ -1028,6 +1094,7 @@ test('PREPARATION allows spending accumulated dubloons before WAR starts', () =>
   for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
 
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.PREPARATION,
     territoryOwners,
@@ -1053,6 +1120,7 @@ test('PREPARATION transitions to WAR when all 4 players are ready', () => {
   for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
 
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.PREPARATION,
     territoryOwners,
@@ -1083,6 +1151,7 @@ test('WAR cannot start while any neutral territory remains', () => {
   for (let id = 1; id < TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
 
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.PREPARATION,
     territoryOwners,
@@ -1104,6 +1173,7 @@ test('WAR gives exactly 8 completed turns to every player', () => {
   for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
 
   const game = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.WAR,
     territoryOwners,
@@ -1215,7 +1285,7 @@ test('combat outcome: both correct and attacker closer in numeric duel gives ter
   });
 
   assert.equal(result.winnerId, 'R');
-  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_ATTACKER_CLOSER');
+  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_ATTACKER_WINS');
   assert.equal(game.state.territories.get(2).ownerId, 'R');
 });
 
@@ -1236,31 +1306,31 @@ test('combat outcome: both correct and defender closer in numeric duel keeps ter
   });
 
   assert.equal(result.winnerId, 'B');
-  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_DEFENDER_CLOSER');
+  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_DEFENDER_WINS');
   assert.equal(game.state.territories.get(2).ownerId, 'B');
 });
 
-test('equal numeric duel distance remains explicitly unresolved', () => {
+test('equal numeric duel error and time gives advantage to defender', () => {
   const game = createBasicWarGame();
 
-  assert.throws(
-    () => game.combatSystem.resolveTerritoryBattle({
-      state: game.state,
-      attackerId: 'R',
-      targetTerritoryId: 2,
-      attackerCorrect: true,
-      defenderCorrect: true,
-      numericDuel: {
-        correctAnswer: 100,
-        attackerAnswer: 99,
-        defenderAnswer: 101,
-      },
-    }),
-    /Numeric duel tie is unresolved/,
-  );
+  const result = game.combatSystem.resolveTerritoryBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetTerritoryId: 2,
+    attackerCorrect: true,
+    defenderCorrect: true,
+    numericDuel: {
+      correctAnswer: 100,
+      attackerAnswer: 99,
+      defenderAnswer: 101,
+      attackerElapsedMs: 1000,
+      defenderElapsedMs: 1000,
+    },
+  });
 
+  assert.equal(result.winnerId, 'B');
   assert.equal(game.state.territories.get(2).ownerId, 'B');
-  assert.equal(game.state.warState.battleHistory.length, 0);
+  assert.equal(game.state.warState.battleHistory.length, 1);
 });
 
 test('base starts with Fort, Harbor and Captain Flag active', () => {
@@ -1455,7 +1525,7 @@ test('base assault uses numeric duel when both players answer the 4-option quest
   assert.equal(result.targetLayer, 'fort');
   assert.equal(result.destroyedLayer, 'fort');
   assert.equal(result.numericDuelUsed, true);
-  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_ATTACKER_CLOSER');
+  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_ATTACKER_WINS');
 });
 
 test('capturing a base keeps defender in game and preserves all defender territories', () => {
@@ -1482,12 +1552,13 @@ test('capturing a base keeps defender in game and preserves all defender territo
 
   assert.equal(game.state.players.has('B'), true);
   assert.deepEqual(defenderTerritoriesAfter, defenderTerritoriesBefore);
-  assert.equal(game.state.bases.get('B').ownerId, 'B');
+  assert.equal(game.state.bases.get('B').ownerId, 'R');
   assert.equal(game.state.bases.get('B').capturedBy, 'R');
+  assert.equal(game.state.bases.get('B').isActiveBase, false);
   assert.equal(game.state.finished, false);
 });
 
-test('captured base cannot be assaulted again', () => {
+test('captured base cannot be assaulted again as an active base', () => {
   const game = createBaseWarGame();
 
   for (let level = 0; level < 3; level++) {
@@ -1509,7 +1580,7 @@ test('captured base cannot be assaulted again', () => {
       attackerCorrect: true,
       defenderCorrect: false,
     }),
-    /already captured/,
+    /former-base territory/,
   );
 });
 
@@ -1527,10 +1598,15 @@ test('RoundSystem creates 8 rounds and every round contains each player exactly 
   }
 });
 
-test('TurnSystem walks exactly 32 player turns before finishing', () => {
+test('TurnSystem walks exactly 32 normal player turns before finishing with a unique Fame leader', () => {
+  const territoryOwners = Object.fromEntries(
+    Array.from({ length: TERRITORY_COUNT }, (_, index) => [index + 1, 'R']),
+  );
   const { state, turnSystem } = createCoreGame({
+    baseAssignments: PLAYER_BASES,
     rng: fixedRng(),
     stage: GAME_STAGES.WAR,
+    territoryOwners,
   });
   const visited = [];
 
@@ -1566,9 +1642,12 @@ test('core modules have no direct browser UI dependency', () => {
     'entities/Ship.js',
     'map/Map.js',
     'systems/ArchipelagoSystem.js',
+    'systems/BaseSelectionSystem.js',
     'systems/BoostSystem.js',
     'systems/CombatSystem.js',
+    'systems/CrewSystem.js',
     'systems/EconomySystem.js',
+    'systems/FameSystem.js',
     'systems/FlagshipSystem.js',
     'systems/RoundSystem.js',
     'systems/StageSystem.js',
