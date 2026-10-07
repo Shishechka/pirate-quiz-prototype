@@ -179,7 +179,12 @@ test('GameState is created with the complete central game state', () => {
       P: 0,
     },
     turnActionUsed: false,
-    turnBoostUsed: false,
+    boostUsedByPlayer: {
+      R: null,
+      B: null,
+      G: null,
+      P: null,
+    },
     selectedTurnBoost: null,
     blackMarks: [],
     tiebreak: null,
