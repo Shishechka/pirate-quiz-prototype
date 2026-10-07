@@ -48,7 +48,7 @@ export class CrewSystem {
   purchaseCrew({ state, playerId, crewType }) {
     this.assertKnownCrewType(crewType);
     if (!this.flagshipSystem.isPurchaseWindow(state, playerId)) {
-      throw new Error('Crew purchases are only allowed in a purchase window');
+      throw new Error('Crew purchases are only allowed in a purchase period');
     }
     if (this.getAllOwnedCrew(state, playerId).includes(crewType)) {
       throw new Error('Duplicate crew members cannot be purchased');
