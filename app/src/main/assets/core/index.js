@@ -1,4 +1,5 @@
 import {
+  GAME_STAGES,
   PLAYER_BASES,
   PLAYER_IDS,
 } from './constants.js';
@@ -22,6 +23,9 @@ export function createCoreGame({
   rng = Math.random,
   territoryOwners = {},
   turnOrders = null,
+  stage = GAME_STAGES.BASE_SELECTION,
+  warState = null,
+  quizState = null,
 } = {}) {
   const map = createPirateQuizMap({ territoryOwners });
 
@@ -43,10 +47,13 @@ export function createCoreGame({
   }
 
   const state = new GameState({
+    stage,
     players,
     territories: map.territories,
     bases: map.bases,
     turnOrders: orders,
+    warState,
+    quizState,
   });
 
   const turnSystem = new TurnSystem({ roundSystem });
