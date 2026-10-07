@@ -66,24 +66,31 @@ export class CombatSystem {
     ));
   }
 
+  getOwnedSourceNodeIds(state, attackerId) {
+    const territoryIds = [...state.territories.values()]
+      .filter(territory => territory.ownerId === attackerId)
+      .map(territory => territory.id);
+
+    const baseIds = [...state.bases.values()]
+      .filter(base => base.ownerId === attackerId)
+      .map(base => base.id);
+
+    return [...territoryIds, ...baseIds];
+  }
+
   getAttackSources(state, attackerId, targetTerritoryId) {
-    return [...state.territories.values()]
-      .filter(territory => (
-        territory.ownerId === attackerId
-        && this.map.areAdjacent(territory.id, Number(targetTerritoryId))
-      ))
-      .map(territory => territory.id)
-      .sort((a, b) => a - b);
+    return this.getOwnedSourceNodeIds(state, attackerId)
+      .filter(sourceId => this.map.areAdjacent(sourceId, Number(targetTerritoryId)))
+      .sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
   }
 
   getBaseAttackSources(state, attackerId, baseId) {
-    return [...state.territories.values()]
-      .filter(territory => (
-        territory.ownerId === attackerId
-        && this.map.areAdjacent(territory.id, String(baseId))
+    return this.getOwnedSourceNodeIds(state, attackerId)
+      .filter(sourceId => (
+        String(sourceId) !== String(baseId)
+        && this.map.areAdjacent(sourceId, String(baseId))
       ))
-      .map(territory => territory.id)
-      .sort((a, b) => a - b);
+      .sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
   }
 
   getDefendingFlagship(state, defenderId, targetNodeId) {
@@ -125,6 +132,62 @@ export class CombatSystem {
     state.warState.activeAttack = attack;
     state.warState.turnActionUsed = true;
     return { ...attack };
+  }
+
+  previewActiveQuestionOutcome({
+    state,
+    attackerCorrect,
+    defenderCorrect,
+    attackerElapsedMs = 0,
+    defenderElapsedMs = 0,
+    numericDuel = null,
+  }) {
+    const attack = state.warState.activeAttack;
+    if (!attack) throw new Error('No active attack');
+    if (attack.phase === 'DEFENDING_FLAGSHIP') {
+      throw new Error(
+        'Flagship-vs-flagship Damage/HP resolution is intentionally undefined in Rules v0.4',
+      );
+    }
+
+    const outcome = this.resolveQuizOutcome({
+      attackerCorrect,
+      defenderCorrect,
+      attackerElapsedMs,
+      defenderElapsedMs,
+      numericDuel,
+    });
+    const winnerId = outcome.winnerSide === 'ATTACKER'
+      ? attack.attackerId
+      : attack.defenderId;
+    const loserId = winnerId === attack.attackerId
+      ? attack.defenderId
+      : attack.attackerId;
+
+    attack.pendingQuestionResult = {
+      winnerId,
+      loserId,
+      result: outcome.reason,
+      attackerCorrect,
+      defenderCorrect,
+      attackerElapsedMs,
+      defenderElapsedMs,
+      numericDuel: numericDuel == null ? null : { ...numericDuel },
+    };
+    attack.phase = 'QUESTION_RESULT_PENDING';
+
+    return { ...attack.pendingQuestionResult };
+  }
+
+  assertDefendingFlagshipCleared(state, targetType, targetId) {
+    const attack = state.warState.activeAttack;
+    if (
+      attack?.defendingFlagshipRequired
+      && attack.targetType === targetType
+      && String(attack.targetId) === String(targetId)
+    ) {
+      throw new Error('Defending flagship must be destroyed before continuing the assault');
+    }
   }
 
   canPlayerAnswerActiveQuestion(state, playerId) {
@@ -373,6 +436,7 @@ export class CombatSystem {
     numericDuel = null,
   }) {
     this.assertWarCanAttack(state, attackerId);
+    this.assertDefendingFlagshipCleared(state, 'TERRITORY', targetTerritoryId);
 
     const target = state.territories.get(Number(targetTerritoryId));
     if (!target) throw new Error(`Unknown territory: ${targetTerritoryId}`);
@@ -437,6 +501,7 @@ export class CombatSystem {
     state.warState.battleHistory.push(battle);
     if (state.warState.activeAttack) {
       state.warState.activeAttack.phase = 'RESULT';
+      state.warState.activeAttack.pendingQuestionResult = null;
       state.warState.activeAttack.lastQuestionResult = {
         winnerId,
         loserId: winnerId === attackerId ? defenderId : attackerId,
@@ -458,6 +523,7 @@ export class CombatSystem {
     numericDuel = null,
   }) {
     this.assertWarCanAttack(state, attackerId);
+    this.assertDefendingFlagshipCleared(state, 'BASE', targetBaseId);
 
     const base = state.bases.get(String(targetBaseId));
     if (!base) throw new Error(`Unknown base: ${targetBaseId}`);
@@ -562,6 +628,7 @@ export class CombatSystem {
     numericDuel = null,
   }) {
     this.assertWarCanAttack(state, attackerId);
+    this.assertDefendingFlagshipCleared(state, 'FORMER_BASE', targetBaseId);
     const base = state.bases.get(String(targetBaseId));
     if (!base) throw new Error(`Unknown base: ${targetBaseId}`);
     if (base.isActiveBase) throw new Error('Target is still an active base');
