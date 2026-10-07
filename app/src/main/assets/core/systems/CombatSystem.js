@@ -126,6 +126,7 @@ export class CombatSystem {
         playerId => playerId !== attackerId && playerId !== defenderId,
       ),
       responses: {},
+      pendingQuestionResult: null,
       lastQuestionResult: null,
       defendingFlagshipRequired: Boolean(defenderFlagship),
     };
@@ -188,6 +189,110 @@ export class CombatSystem {
     ) {
       throw new Error('Defending flagship must be destroyed before continuing the assault');
     }
+  }
+
+  getAttackFlagshipDamage(state, attackerId) {
+    if (!this.flagshipSystem) throw new Error('FlagshipSystem is required');
+    const baseDamage = this.flagshipSystem.getFlagship(state, attackerId).dmg;
+    return this.getSelectedBoostType(state, attackerId) === BOOST_TYPES.DOUBLE_VOLLEY
+      ? baseDamage * 2
+      : baseDamage;
+  }
+
+  ensureAttackContext({
+    state,
+    attackerId,
+    targetType,
+    targetId,
+  }) {
+    let attack = state.warState.activeAttack;
+
+    if (attack == null) {
+      if (state.warState.turnActionUsed) {
+        throw new Error('Only one attack is allowed per ordinary turn');
+      }
+
+      if (targetType === 'TERRITORY') {
+        this.beginTerritoryAttack({
+          state,
+          attackerId,
+          targetTerritoryId: targetId,
+        });
+      } else if (targetType === 'BASE') {
+        this.beginBaseAttack({
+          state,
+          attackerId,
+          targetBaseId: targetId,
+        });
+      } else if (targetType === 'FORMER_BASE') {
+        this.beginFormerBaseAttack({
+          state,
+          attackerId,
+          targetBaseId: targetId,
+        });
+      } else {
+        throw new Error(`Unknown attack target type: ${targetType}`);
+      }
+      attack = state.warState.activeAttack;
+    }
+
+    if (
+      attack.attackerId !== attackerId
+      || attack.targetType !== targetType
+      || String(attack.targetId) !== String(targetId)
+    ) {
+      throw new Error('A different attack is already active this turn');
+    }
+
+    if (attack.phase === 'DEFENDING_FLAGSHIP') {
+      throw new Error('Defending flagship must be destroyed before continuing the assault');
+    }
+    if (!['QUESTION', 'QUESTION_RESULT_PENDING'].includes(attack.phase)) {
+      throw new Error(`Attack cannot resolve a question during phase ${attack.phase}`);
+    }
+
+    return attack;
+  }
+
+  commitActiveQuestionResult(state) {
+    const attack = state.warState.activeAttack;
+    const pending = attack?.pendingQuestionResult;
+    if (!attack || !pending) {
+      throw new Error('No pending battle question result to commit');
+    }
+
+    attack.phase = 'QUESTION';
+
+    const common = {
+      state,
+      attackerId: attack.attackerId,
+      attackerCorrect: pending.attackerCorrect,
+      defenderCorrect: pending.defenderCorrect,
+      attackerElapsedMs: pending.attackerElapsedMs,
+      defenderElapsedMs: pending.defenderElapsedMs,
+      numericDuel: pending.numericDuel,
+    };
+
+    if (attack.targetType === 'TERRITORY') {
+      return this.resolveTerritoryBattle({
+        ...common,
+        targetTerritoryId: attack.targetId,
+      });
+    }
+    if (attack.targetType === 'BASE') {
+      return this.resolveBaseBattle({
+        ...common,
+        targetBaseId: attack.targetId,
+      });
+    }
+    if (attack.targetType === 'FORMER_BASE') {
+      return this.resolveFormerBaseBattle({
+        ...common,
+        targetBaseId: attack.targetId,
+      });
+    }
+
+    throw new Error(`Unknown attack target type: ${attack.targetType}`);
   }
 
   canPlayerAnswerActiveQuestion(state, playerId) {
@@ -436,7 +541,12 @@ export class CombatSystem {
     numericDuel = null,
   }) {
     this.assertWarCanAttack(state, attackerId);
-    this.assertDefendingFlagshipCleared(state, 'TERRITORY', targetTerritoryId);
+    this.ensureAttackContext({
+      state,
+      attackerId,
+      targetType: 'TERRITORY',
+      targetId: targetTerritoryId,
+    });
 
     const target = state.territories.get(Number(targetTerritoryId));
     if (!target) throw new Error(`Unknown territory: ${targetTerritoryId}`);
@@ -523,7 +633,12 @@ export class CombatSystem {
     numericDuel = null,
   }) {
     this.assertWarCanAttack(state, attackerId);
-    this.assertDefendingFlagshipCleared(state, 'BASE', targetBaseId);
+    this.ensureAttackContext({
+      state,
+      attackerId,
+      targetType: 'BASE',
+      targetId: targetBaseId,
+    });
 
     const base = state.bases.get(String(targetBaseId));
     if (!base) throw new Error(`Unknown base: ${targetBaseId}`);
@@ -614,6 +729,22 @@ export class CombatSystem {
     };
 
     state.warState.battleHistory.push(battle);
+
+    if (state.warState.activeAttack) {
+      state.warState.activeAttack.pendingQuestionResult = null;
+      state.warState.activeAttack.lastQuestionResult = {
+        winnerId,
+        loserId: winnerId === attackerId ? defenderId : attackerId,
+        result: outcome.reason,
+      };
+      if (outcome.winnerSide === 'ATTACKER' && !baseCaptured) {
+        state.warState.activeAttack.phase = 'QUESTION';
+        state.warState.activeAttack.responses = {};
+      } else {
+        state.warState.activeAttack.phase = 'RESULT';
+      }
+    }
+
     return { ...battle };
   }
 
@@ -628,7 +759,12 @@ export class CombatSystem {
     numericDuel = null,
   }) {
     this.assertWarCanAttack(state, attackerId);
-    this.assertDefendingFlagshipCleared(state, 'FORMER_BASE', targetBaseId);
+    this.ensureAttackContext({
+      state,
+      attackerId,
+      targetType: 'FORMER_BASE',
+      targetId: targetBaseId,
+    });
     const base = state.bases.get(String(targetBaseId));
     if (!base) throw new Error(`Unknown base: ${targetBaseId}`);
     if (base.isActiveBase) throw new Error('Target is still an active base');
@@ -696,6 +832,15 @@ export class CombatSystem {
       result: outcome.reason,
     };
     state.warState.battleHistory.push(battle);
+    if (state.warState.activeAttack) {
+      state.warState.activeAttack.pendingQuestionResult = null;
+      state.warState.activeAttack.lastQuestionResult = {
+        winnerId,
+        loserId: winnerId === attackerId ? defenderId : attackerId,
+        result: outcome.reason,
+      };
+      state.warState.activeAttack.phase = 'RESULT';
+    }
     return { ...battle };
   }
 }

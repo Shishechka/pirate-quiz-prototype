@@ -139,7 +139,7 @@ test('GameState is created with the complete central game state', () => {
       crewSlots: 0,
     });
     assert.equal(typeof player.boosts, 'object');
-    assert.equal(player.boosts[BOOST_TYPES.SECRET_ROUTE], 1);
+    assert.equal(player.boosts[BOOST_TYPES.SECRET_ROUTE], 0);
   }
 
   assert.deepEqual(state.archipelagoState, {
@@ -186,6 +186,7 @@ test('GameState is created with the complete central game state', () => {
     responses: {},
     ranking: [],
     deadlineAtMs: null,
+    questionTimeLimitMs: null,
     lockedPlayerIds: [],
   });
   assert.deepEqual(state.resultState, {
@@ -243,8 +244,8 @@ test('player boost state has one source of truth with legacy secret alias', () =
     baseAssignments: PLAYER_BASES, rng: fixedRng() });
   const red = state.players.get('R');
 
-  assert.equal(red.secret, 1);
-  assert.equal(red.boosts[BOOST_TYPES.SECRET_ROUTE], 1);
+  assert.equal(red.secret, 0);
+  assert.equal(red.boosts[BOOST_TYPES.SECRET_ROUTE], 0);
 
   red.secret = 0;
 

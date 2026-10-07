@@ -16,6 +16,15 @@ function countByPlayer(claims) {
   return counts;
 }
 
+function shuffle(values, rng) {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(rng() * (index + 1));
+    [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+  }
+  return result;
+}
+
 export class ArchipelagoSystem {
   constructor({
     map,
@@ -121,7 +130,7 @@ export class ArchipelagoSystem {
       throw new Error('correctAnswer must be an integer');
     }
 
-    const results = playerIds.map(playerId => {
+    const normalizedResults = playerIds.map(playerId => {
       const normalized = this.normalizeNumericResponse(responses?.[playerId]);
       return {
         playerId,
@@ -129,17 +138,22 @@ export class ArchipelagoSystem {
         error: normalized.answered
           ? Math.abs(normalized.response - correctAnswer)
           : null,
-        randomOrder: normalized.answered ? null : this.rng(),
       };
     });
 
-    results.sort((a, b) => {
-      if (a.answered !== b.answered) return a.answered ? -1 : 1;
-      if (!a.answered && !b.answered) return a.randomOrder - b.randomOrder;
-      if (a.error !== b.error) return a.error - b.error;
-      if (a.elapsedMs !== b.elapsedMs) return a.elapsedMs - b.elapsedMs;
-      return 0;
-    });
+    const answered = normalizedResults
+      .filter(result => result.answered)
+      .sort((a, b) => {
+        if (a.error !== b.error) return a.error - b.error;
+        if (a.elapsedMs !== b.elapsedMs) return a.elapsedMs - b.elapsedMs;
+        return 0;
+      });
+
+    const unanswered = shuffle(
+      normalizedResults.filter(result => !result.answered),
+      this.rng,
+    );
+    const results = [...answered, ...unanswered];
 
     const tieGroups = [];
     let index = 0;
@@ -163,7 +177,7 @@ export class ArchipelagoSystem {
     }
 
     return {
-      rankedResponses: results.map(({ randomOrder, ...entry }) => entry),
+      rankedResponses: results.map(entry => ({ ...entry })),
       tieGroups,
     };
   }
@@ -224,7 +238,8 @@ export class ArchipelagoSystem {
     state.quizState.currentQuestion = question;
     state.quizState.questionType = QUESTION_TYPES.NUMERIC;
     state.quizState.context = GAME_STAGES.ARCHIPELAGO;
-    state.quizState.deadlineAtMs = ARCHIPELAGO_QUESTION_TIME_LIMIT_MS;
+    state.quizState.deadlineAtMs = null;
+    state.quizState.questionTimeLimitMs = ARCHIPELAGO_QUESTION_TIME_LIMIT_MS;
     state.quizState.lockedPlayerIds = [...PLAYER_IDS];
 
     if (rankingResult.tieGroups.length > 0) {
@@ -266,16 +281,9 @@ export class ArchipelagoSystem {
     state.quizState.currentQuestion = question;
     state.quizState.questionType = QUESTION_TYPES.NUMERIC;
     state.quizState.context = 'ARCHIPELAGO_TIE_BREAK';
-    state.quizState.deadlineAtMs = ARCHIPELAGO_QUESTION_TIME_LIMIT_MS;
+    state.quizState.deadlineAtMs = null;
+    state.quizState.questionTimeLimitMs = ARCHIPELAGO_QUESTION_TIME_LIMIT_MS;
     state.quizState.lockedPlayerIds = [...tiedPlayerIds];
-
-    if (tieResult.tieGroups.length > 0) {
-      progress.pendingTieGroups[0] = [...tieResult.tieGroups[0]];
-      return {
-        requiresTieBreak: true,
-        tiedPlayerIds: [...progress.pendingTieGroups[0]],
-      };
-    }
 
     const positions = tiedPlayerIds
       .map(playerId => progress.pendingRankedResponses
@@ -289,6 +297,11 @@ export class ArchipelagoSystem {
     });
 
     progress.pendingTieGroups.shift();
+    if (tieResult.tieGroups.length > 0) {
+      progress.pendingTieGroups.unshift(
+        ...tieResult.tieGroups.map(group => [...group]),
+      );
+    }
 
     if (progress.pendingTieGroups.length > 0) {
       return {

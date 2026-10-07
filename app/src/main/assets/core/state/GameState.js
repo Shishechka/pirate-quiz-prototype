@@ -61,6 +61,7 @@ function createDefaultQuizState() {
     responses: {},
     ranking: [],
     deadlineAtMs: null,
+    questionTimeLimitMs: null,
     lockedPlayerIds: [],
   };
 }
@@ -143,6 +144,9 @@ export class GameState {
           eligibleResponderIds: [...(warState.activeAttack.eligibleResponderIds ?? [])],
           observerPlayerIds: [...(warState.activeAttack.observerPlayerIds ?? [])],
           responses: { ...(warState.activeAttack.responses ?? {}) },
+          pendingQuestionResult: warState.activeAttack.pendingQuestionResult == null
+            ? null
+            : { ...warState.activeAttack.pendingQuestionResult },
         },
       battleHistory: [...(warState?.battleHistory ?? [])].map(battle => ({
         ...battle,

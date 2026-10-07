@@ -9,7 +9,7 @@ export class Player {
     flags = 0,
     ship = null,
     boosts = null,
-    secret = 1,
+    secret = 0,
     crewReserve = [],
   }) {
     if (!id) throw new Error('Player.id is required');
