@@ -34,7 +34,9 @@ function createDefaultWarState() {
       PLAYER_IDS.map(playerId => [playerId, 0]),
     ),
     turnActionUsed: false,
-    turnBoostUsed: false,
+    boostUsedByPlayer: Object.fromEntries(
+      PLAYER_IDS.map(playerId => [playerId, null]),
+    ),
     selectedTurnBoost: null,
     blackMarks: [],
     tiebreak: null,
@@ -154,6 +156,10 @@ export class GameState {
       turnsTakenByPlayer: {
         ...createDefaultWarState().turnsTakenByPlayer,
         ...(warState?.turnsTakenByPlayer ?? {}),
+      },
+      boostUsedByPlayer: {
+        ...createDefaultWarState().boostUsedByPlayer,
+        ...(warState?.boostUsedByPlayer ?? {}),
       },
       blackMarks: [...(warState?.blackMarks ?? [])].map(mark => ({ ...mark })),
       selectedTurnBoost: warState?.selectedTurnBoost == null
