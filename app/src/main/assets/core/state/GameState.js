@@ -3,6 +3,13 @@ import {
   isGameStage,
 } from '../constants.js';
 
+function createDefaultEconomyState() {
+  return {
+    transactions: [],
+    nextTransactionId: 1,
+  };
+}
+
 function createDefaultWarState() {
   return {
     activeAttack: null,
@@ -39,6 +46,7 @@ export class GameState {
     round = 1,
     turnIndex = 0,
     archipelagoState = null,
+    economyState = null,
     warState = null,
     quizState = null,
   }) {
@@ -59,6 +67,14 @@ export class GameState {
       claimQueue: [...(archipelagoState?.claimQueue ?? [])],
       claimedThisRound: [...(archipelagoState?.claimedThisRound ?? [])],
       completedRounds: [...(archipelagoState?.completedRounds ?? [])],
+    };
+
+    this.economyState = {
+      ...createDefaultEconomyState(),
+      ...(economyState ?? {}),
+      transactions: [...(economyState?.transactions ?? [])].map(transaction => ({
+        ...transaction,
+      })),
     };
 
     this.warState = {

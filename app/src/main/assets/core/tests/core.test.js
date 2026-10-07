@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   BoostSystem,
+  EconomySystem,
   createCoreGame,
   createPirateQuizMap,
   RoundSystem,
@@ -15,6 +16,10 @@ import {
   ARCHIPELAGO_TERRITORY_AWARDS,
   BASE_IDS,
   BOOST_TYPES,
+  DEFAULT_ECONOMY_PRICES,
+  DUBLOON_INCOME_AMOUNTS,
+  ECONOMY_PRICE_KEYS,
+  ECONOMY_TRANSACTION_TYPES,
   GAME_STAGES,
   GAME_STAGE_SEQUENCE,
   ISLAND_BOOST_TABLES,
@@ -96,6 +101,10 @@ test('GameState is created with the complete central game state', () => {
     claimIndex: 0,
     claimedThisRound: [],
     completedRounds: [],
+  });
+  assert.deepEqual(state.economyState, {
+    transactions: [],
+    nextTransactionId: 1,
   });
   assert.deepEqual(state.warState, { activeAttack: null });
   assert.deepEqual(state.quizState, {
@@ -606,6 +615,188 @@ test('even an erroneous second neutral-capture notification cannot generate a se
   assert.equal(rngCalls, 1);
 });
 
+test('EconomySystem exposes current player dubloon balance without duplicating it', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), 20);
+  assert.equal(
+    game.economySystem.getBalance(game.state, 'R'),
+    game.state.players.get('R').coins,
+  );
+});
+
+test('EconomySystem supports +10, +20 and +30 dubloon income', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+  let expectedBalance = 20;
+
+  for (const amount of DUBLOON_INCOME_AMOUNTS) {
+    const transaction = game.economySystem.credit({
+      state: game.state,
+      playerId: 'R',
+      amount,
+      reason: `TEST_REWARD_${amount}`,
+    });
+
+    expectedBalance += amount;
+    assert.equal(game.economySystem.getBalance(game.state, 'R'), expectedBalance);
+    assert.equal(transaction.type, ECONOMY_TRANSACTION_TYPES.CREDIT);
+    assert.equal(transaction.amount, amount);
+    assert.equal(transaction.balanceAfter, expectedBalance);
+  }
+});
+
+test('EconomySystem spends dubloons and checks sufficient funds', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  assert.equal(game.economySystem.canAfford(game.state, 'R', 20), true);
+  assert.equal(game.economySystem.canAfford(game.state, 'R', 30), false);
+
+  const transaction = game.economySystem.spend({
+    state: game.state,
+    playerId: 'R',
+    amount: 20,
+    reason: 'TEST_SPEND',
+  });
+
+  assert.equal(transaction.type, ECONOMY_TRANSACTION_TYPES.DEBIT);
+  assert.equal(transaction.balanceBefore, 20);
+  assert.equal(transaction.balanceAfter, 0);
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), 0);
+});
+
+test('EconomySystem never changes balance when a spend cannot be afforded', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+  const before = game.economySystem.getBalance(game.state, 'R');
+
+  assert.throws(
+    () => game.economySystem.spend({
+      state: game.state,
+      playerId: 'R',
+      amount: 30,
+      reason: 'TOO_EXPENSIVE',
+    }),
+    /Insufficient dubloons/,
+  );
+
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), before);
+  assert.deepEqual(game.economySystem.getHistory(game.state, 'R'), []);
+});
+
+test('default economy prices match the approved Pirate Quiz values', () => {
+  assert.deepEqual(DEFAULT_ECONOMY_PRICES, {
+    [ECONOMY_PRICE_KEYS.SHIP_HP_UPGRADE]: 20,
+    [ECONOMY_PRICE_KEYS.SHIP_DAMAGE_UPGRADE]: 30,
+    [ECONOMY_PRICE_KEYS.CREW_SLOT]: 30,
+    [ECONOMY_PRICE_KEYS.CREW_MEMBER]: 20,
+  });
+
+  const game = createCoreGame({ rng: fixedRng() });
+
+  assert.equal(
+    game.economySystem.getPrice(ECONOMY_PRICE_KEYS.SHIP_HP_UPGRADE),
+    20,
+  );
+  assert.equal(
+    game.economySystem.getPrice(ECONOMY_PRICE_KEYS.SHIP_DAMAGE_UPGRADE),
+    30,
+  );
+  assert.equal(
+    game.economySystem.getPrice(ECONOMY_PRICE_KEYS.CREW_SLOT),
+    30,
+  );
+  assert.equal(
+    game.economySystem.getPrice(ECONOMY_PRICE_KEYS.CREW_MEMBER),
+    20,
+  );
+});
+
+test('economy prices are configurable without changing the default config', () => {
+  const economy = new EconomySystem({
+    prices: {
+      [ECONOMY_PRICE_KEYS.CREW_MEMBER]: 25,
+    },
+  });
+
+  assert.equal(
+    economy.getPrice(ECONOMY_PRICE_KEYS.CREW_MEMBER),
+    25,
+  );
+  assert.equal(
+    economy.getPrice(ECONOMY_PRICE_KEYS.SHIP_HP_UPGRADE),
+    20,
+  );
+  assert.equal(
+    DEFAULT_ECONOMY_PRICES[ECONOMY_PRICE_KEYS.CREW_MEMBER],
+    20,
+  );
+});
+
+test('EconomySystem can spend a configured price without applying purchase effects', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  assert.equal(
+    game.economySystem.canAffordPrice(
+      game.state,
+      'R',
+      ECONOMY_PRICE_KEYS.SHIP_HP_UPGRADE,
+    ),
+    true,
+  );
+
+  const hpBefore = game.state.players.get('R').ship.maxHp;
+
+  const transaction = game.economySystem.spendPrice({
+    state: game.state,
+    playerId: 'R',
+    priceKey: ECONOMY_PRICE_KEYS.SHIP_HP_UPGRADE,
+  });
+
+  assert.equal(transaction.amount, 20);
+  assert.equal(game.economySystem.getBalance(game.state, 'R'), 0);
+  assert.equal(game.state.players.get('R').ship.maxHp, hpBefore);
+});
+
+test('EconomySystem records deterministic transaction history and reasons', () => {
+  const game = createCoreGame({ rng: fixedRng() });
+
+  game.economySystem.credit({
+    state: game.state,
+    playerId: 'R',
+    amount: 10,
+    reason: 'TERRITORY_CAPTURE',
+  });
+  game.economySystem.spend({
+    state: game.state,
+    playerId: 'R',
+    amount: 20,
+    reason: 'SHIP_HP_UPGRADE',
+  });
+
+  const history = game.economySystem.getHistory(game.state, 'R');
+
+  assert.deepEqual(history, [
+    {
+      transactionId: 1,
+      playerId: 'R',
+      type: ECONOMY_TRANSACTION_TYPES.CREDIT,
+      amount: 10,
+      reason: 'TERRITORY_CAPTURE',
+      balanceBefore: 20,
+      balanceAfter: 30,
+    },
+    {
+      transactionId: 2,
+      playerId: 'R',
+      type: ECONOMY_TRANSACTION_TYPES.DEBIT,
+      amount: 20,
+      reason: 'SHIP_HP_UPGRADE',
+      balanceBefore: 30,
+      balanceAfter: 10,
+    },
+  ]);
+  assert.equal(game.state.economyState.nextTransactionId, 3);
+});
+
 test('RoundSystem creates 8 rounds and every round contains each player exactly once', () => {
   const rounds = new RoundSystem({ rng: fixedRng() });
   const orders = rounds.createTurnOrders();
@@ -660,6 +851,7 @@ test('core modules have no direct browser UI dependency', () => {
     'map/Map.js',
     'systems/ArchipelagoSystem.js',
     'systems/BoostSystem.js',
+    'systems/EconomySystem.js',
     'systems/RoundSystem.js',
     'systems/TurnSystem.js',
   ];

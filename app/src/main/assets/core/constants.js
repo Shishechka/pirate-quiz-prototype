@@ -83,6 +83,27 @@ export const ISLAND_BOOST_TABLES = Object.freeze({
   ]),
 });
 
+export const DUBLOON_INCOME_AMOUNTS = Object.freeze([10, 20, 30]);
+
+export const ECONOMY_TRANSACTION_TYPES = Object.freeze({
+  CREDIT: 'CREDIT',
+  DEBIT: 'DEBIT',
+});
+
+export const ECONOMY_PRICE_KEYS = Object.freeze({
+  SHIP_HP_UPGRADE: 'SHIP_HP_UPGRADE',
+  SHIP_DAMAGE_UPGRADE: 'SHIP_DAMAGE_UPGRADE',
+  CREW_SLOT: 'CREW_SLOT',
+  CREW_MEMBER: 'CREW_MEMBER',
+});
+
+export const DEFAULT_ECONOMY_PRICES = Object.freeze({
+  [ECONOMY_PRICE_KEYS.SHIP_HP_UPGRADE]: 20,
+  [ECONOMY_PRICE_KEYS.SHIP_DAMAGE_UPGRADE]: 30,
+  [ECONOMY_PRICE_KEYS.CREW_SLOT]: 30,
+  [ECONOMY_PRICE_KEYS.CREW_MEMBER]: 20,
+});
+
 export const ARCHIPELAGO_ROUND_COUNT = 6;
 export const ARCHIPELAGO_TERRITORY_AWARDS = Object.freeze([2, 2, 1, 1]);
 export const ARCHIPELAGO_CLAIM_RANK_ORDER = Object.freeze([0, 1, 2, 3, 0, 1]);
