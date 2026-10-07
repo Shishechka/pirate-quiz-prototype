@@ -241,6 +241,9 @@ function statusText() {
   }
 
   if (state.stage === GAME_STAGES.ARCHIPELAGO) {
+    if (humanPhase === 'READY_TO_START') {
+      return 'Карта готова · нажми «Начать освоение»';
+    }
     const claimant = game.archipelagoSystem.getCurrentClaimPlayerId(state);
     if (claimant === HUMAN) return 'Выбери доступный нейтральный остров';
     if (state.archipelagoState.pendingTieGroups.length > 0) {
@@ -625,7 +628,13 @@ function renderCoreUi() {
   $('status').textContent = statusText();
 
   const mode = $('modeBtn');
-  if (game.state.stage === GAME_STAGES.PREPARATION) {
+  if (
+    game.state.stage === GAME_STAGES.ARCHIPELAGO
+    && humanPhase === 'READY_TO_START'
+  ) {
+    mode.textContent = '▶ Начать освоение';
+    mode.disabled = false;
+  } else if (game.state.stage === GAME_STAGES.PREPARATION) {
     mode.textContent = '✓ Готов';
     mode.disabled = game.state.preparationState.readyPlayerIds.includes(HUMAN);
   } else if (
@@ -1798,6 +1807,16 @@ function handleBaseClick(baseId) {
 }
 
 function handleModeButton() {
+  if (
+    game.state.stage === GAME_STAGES.ARCHIPELAGO
+    && humanPhase === 'READY_TO_START'
+  ) {
+    humanPhase = 'SETTLEMENT';
+    draw();
+    startArchipelagoQuestion();
+    return;
+  }
+
   if (game.state.stage === GAME_STAGES.PREPARATION) {
     humanReady();
     return;
@@ -1885,16 +1904,10 @@ function startNewGame() {
     .map(playerId => `${playerId}→${game.state.players.get(playerId).baseId}`)
     .join(' · ');
   log(`Rules v${RULES_VERSION} / Core v${CORE_VERSION}. Базы: ${assignments}`);
-  humanPhase = 'SETTLEMENT';
+  humanPhase = 'READY_TO_START';
   draw();
 
   if (!visualPatchLoaded) loadVisualPatch();
-
-  setTimeout(() => {
-    if (game.state.stage === GAME_STAGES.ARCHIPELAGO) {
-      startArchipelagoQuestion();
-    }
-  }, 500);
 }
 
 setupEvents();
