@@ -10,6 +10,8 @@ import {
   RoundSystem,
 } from '../index.js';
 import {
+  ARCHIPELAGO_ROUND_COUNT,
+  ARCHIPELAGO_TERRITORY_AWARDS,
   BASE_IDS,
   BOOST_TYPES,
   GAME_STAGES,
@@ -25,6 +27,39 @@ function fixedRng() {
   const values = [0.11, 0.77, 0.33, 0.92, 0.05, 0.61, 0.49, 0.20];
   let index = 0;
   return () => values[(index++) % values.length];
+}
+
+function responsesForRanking(ranking, correctAnswer = 100) {
+  return Object.fromEntries(
+    ranking.map((playerId, index) => [playerId, correctAnswer + index + 1]),
+  );
+}
+
+function completeArchipelagoRound(game, ranking = PLAYER_IDS) {
+  const correctAnswer = 100;
+  const started = game.archipelagoSystem.beginRound({
+    state: game.state,
+    question: { id: `archipelago-${game.state.round}` },
+    correctAnswer,
+    responses: responsesForRanking(ranking, correctAnswer),
+  });
+
+  assert.deepEqual(started.ranking, ranking);
+
+  while (game.archipelagoSystem.getCurrentClaimPlayerId(game.state) != null) {
+    const playerId = game.archipelagoSystem.getCurrentClaimPlayerId(game.state);
+    const claimable = game.archipelagoSystem.getClaimableTerritoryIds(
+      game.state,
+      playerId,
+    );
+    assert.ok(claimable.length > 0, `player ${playerId} must have a claimable territory`);
+    game.archipelagoSystem.claimTerritory({
+      state: game.state,
+      territoryId: claimable[0],
+    });
+  }
+
+  return game.state.archipelagoState.completedRounds.at(-1);
 }
 
 test('GameState is created with the complete central game state', () => {
@@ -53,12 +88,20 @@ test('GameState is created with the complete central game state', () => {
     assert.equal(player.boosts[BOOST_TYPES.SECRET_ROUTE], 1);
   }
 
+  assert.deepEqual(state.archipelagoState, {
+    ranking: [],
+    claimQueue: [],
+    claimIndex: 0,
+    claimedThisRound: [],
+    completedRounds: [],
+  });
   assert.deepEqual(state.warState, { activeAttack: null });
   assert.deepEqual(state.quizState, {
     currentQuestion: null,
     questionType: null,
     context: null,
     responses: {},
+    ranking: [],
   });
   assert.equal(state.finished, false);
 });
@@ -170,6 +213,185 @@ test('base connections match legacy map topology', () => {
   assert.deepEqual(map.getNeighbors('D').sort((a, b) => a - b), [30, 35, 36]);
 });
 
+test('ARCHIPELAGO numeric question requires all 4 responses and ranks by absolute error', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  const result = game.archipelagoSystem.beginRound({
+    state: game.state,
+    question: { id: 'numeric-1' },
+    correctAnswer: 100,
+    responses: {
+      R: 103,
+      B: 101,
+      G: 104,
+      P: 102,
+    },
+  });
+
+  assert.deepEqual(result.ranking, ['B', 'P', 'R', 'G']);
+  assert.deepEqual(result.awards, ARCHIPELAGO_TERRITORY_AWARDS);
+  assert.deepEqual(result.claimQueue, ['B', 'P', 'R', 'G', 'B', 'P']);
+  assert.equal(game.state.quizState.questionType, 'NUMERIC');
+  assert.equal(game.state.quizState.context, GAME_STAGES.ARCHIPELAGO);
+});
+
+test('ARCHIPELAGO does not invent a tie-break rule for equal numeric errors', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  assert.throws(
+    () => game.archipelagoSystem.beginRound({
+      state: game.state,
+      correctAnswer: 100,
+      responses: {
+        R: 99,
+        B: 101,
+        G: 103,
+        P: 105,
+      },
+    }),
+    /tie is unresolved/,
+  );
+});
+
+test('each ARCHIPELAGO round distributes exactly 6 territories', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  const summary = completeArchipelagoRound(game, ['R', 'B', 'G', 'P']);
+
+  assert.equal(summary.round, 1);
+  assert.equal(summary.claims.length, 6);
+  assert.equal(
+    [...game.state.territories.values()].filter(territory => territory.ownerId != null).length,
+    6,
+  );
+  assert.equal(game.state.round, 2);
+});
+
+test('ARCHIPELAGO awards territories 2/2/1/1 according to numeric ranking', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  const ranking = ['G', 'R', 'P', 'B'];
+  const summary = completeArchipelagoRound(game, ranking);
+  const counts = Object.fromEntries(PLAYER_IDS.map(playerId => [playerId, 0]));
+
+  for (const claim of summary.claims) counts[claim.playerId] += 1;
+
+  assert.equal(counts.G, 2);
+  assert.equal(counts.R, 2);
+  assert.equal(counts.P, 1);
+  assert.equal(counts.B, 1);
+});
+
+test('after 6 ARCHIPELAGO rounds exactly all 36 territories are distributed', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  for (let round = 1; round <= ARCHIPELAGO_ROUND_COUNT; round++) {
+    const summary = completeArchipelagoRound(game, ['R', 'B', 'G', 'P']);
+    assert.equal(summary.claims.length, 6);
+  }
+
+  const owned = [...game.state.territories.values()]
+    .filter(territory => territory.ownerId != null);
+
+  assert.equal(game.state.archipelagoState.completedRounds.length, 6);
+  assert.equal(owned.length, 36);
+  assert.equal(game.state.stage, GAME_STAGES.PREPARATION);
+});
+
+test('after 6 ARCHIPELAGO rounds no neutral territories remain', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  for (let round = 1; round <= ARCHIPELAGO_ROUND_COUNT; round++) {
+    completeArchipelagoRound(game, ['R', 'B', 'G', 'P']);
+  }
+
+  assert.deepEqual(game.archipelagoSystem.getNeutralTerritoryIds(game.state), []);
+});
+
+test('ARCHIPELAGO forbids a non-adjacent island while the player has adjacent neutral islands', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  game.archipelagoSystem.beginRound({
+    state: game.state,
+    correctAnswer: 100,
+    responses: responsesForRanking(['R', 'B', 'G', 'P']),
+  });
+
+  assert.equal(game.archipelagoSystem.getCurrentClaimPlayerId(game.state), 'R');
+  assert.deepEqual(
+    game.archipelagoSystem.getAdjacentNeutralTerritoryIds(game.state, 'R'),
+    [1, 2, 7],
+  );
+  assert.equal(game.archipelagoSystem.isCutOff(game.state, 'R'), false);
+
+  assert.throws(
+    () => game.archipelagoSystem.claimTerritory({
+      state: game.state,
+      territoryId: 36,
+    }),
+    /not adjacent/,
+  );
+
+  assert.equal(game.state.territories.get(36).ownerId, null);
+
+  const claim = game.archipelagoSystem.claimTerritory({
+    state: game.state,
+    territoryId: 1,
+  });
+  assert.equal(claim.playerId, 'R');
+  assert.equal(claim.territoryId, 1);
+});
+
+test('ARCHIPELAGO allows a non-adjacent neutral island only when the player is cut off', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  for (const id of [1, 2, 7]) {
+    game.state.territories.get(id).ownerId = 'B';
+  }
+
+  game.archipelagoSystem.beginRound({
+    state: game.state,
+    correctAnswer: 100,
+    responses: responsesForRanking(['R', 'B', 'G', 'P']),
+  });
+
+  assert.equal(game.archipelagoSystem.isCutOff(game.state, 'R'), true);
+  assert.equal(game.archipelagoSystem.canClaimTerritory(game.state, 'R', 36), true);
+
+  const claim = game.archipelagoSystem.claimTerritory({
+    state: game.state,
+    territoryId: 36,
+  });
+
+  assert.equal(claim.playerId, 'R');
+  assert.equal(claim.territoryId, 36);
+  assert.equal(claim.usedCutOffRule, true);
+});
+
 test('RoundSystem creates 8 rounds and every round contains each player exactly once', () => {
   const rounds = new RoundSystem({ rng: fixedRng() });
   const orders = rounds.createTurnOrders();
@@ -222,6 +444,7 @@ test('core modules have no direct browser UI dependency', () => {
     'entities/Base.js',
     'entities/Ship.js',
     'map/Map.js',
+    'systems/ArchipelagoSystem.js',
     'systems/RoundSystem.js',
     'systems/TurnSystem.js',
   ];
