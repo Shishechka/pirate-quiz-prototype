@@ -221,14 +221,14 @@ export class BoostSystem {
 
     if (boostType === BOOST_TYPES.SECOND_CHANCE) {
       const attack = state.warState.activeAttack;
-      if (!attack || attack.lastQuestionResult?.loserId !== playerId) {
-        throw new Error('Second Chance requires a lost active battle question');
+      if (!attack || attack.pendingQuestionResult?.loserId !== playerId) {
+        throw new Error('Second Chance requires a lost result that has not been committed yet');
       }
       this.consumeFromInventory(state, playerId, boostType);
       attack.phase = 'QUESTION';
       attack.questionType = 'MULTIPLE_CHOICE_4';
       attack.responses = {};
-      attack.lastQuestionResult = null;
+      attack.pendingQuestionResult = null;
       attack.secondChanceUsedBy = playerId;
       this.markTurnBoostUsed(state, playerId, boostType);
       return { boostType, replayQuestion: true };
