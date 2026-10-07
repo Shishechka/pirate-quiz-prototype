@@ -28,11 +28,22 @@ export class RoundSystem {
     }
   }
 
+  shuffle(values) {
+    return shuffle(values, this.rng);
+  }
+
   createTurnOrders() {
     return Array.from(
       { length: this.roundCount },
-      () => shuffle(this.playerIds, this.rng),
+      () => this.shuffle(this.playerIds),
     );
+  }
+
+  createTiebreakOrder(playerIds) {
+    if (!Array.isArray(playerIds) || playerIds.length < 2) {
+      throw new Error('Tiebreak requires at least 2 players');
+    }
+    return this.shuffle(playerIds);
   }
 
   validateTurnOrders(turnOrders) {

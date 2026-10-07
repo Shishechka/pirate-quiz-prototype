@@ -1,3 +1,8 @@
+import {
+  FLAGSHIP_MAX_DAMAGE,
+  FLAGSHIP_MAX_HP,
+} from '../constants.js';
+
 export class Ship {
   constructor({
     hp = 3,
@@ -10,9 +15,13 @@ export class Ship {
     sunk = false,
   } = {}) {
     if (!Number.isInteger(hp) || hp < 0) throw new Error('Ship.hp must be a non-negative integer');
-    if (!Number.isInteger(maxHp) || maxHp < 1) throw new Error('Ship.maxHp must be a positive integer');
+    if (!Number.isInteger(maxHp) || maxHp < 1 || maxHp > FLAGSHIP_MAX_HP) {
+      throw new Error(`Ship.maxHp must be an integer from 1 to ${FLAGSHIP_MAX_HP}`);
+    }
     if (hp > maxHp) throw new Error('Ship.hp cannot exceed Ship.maxHp');
-    if (!Number.isInteger(dmg) || dmg < 1) throw new Error('Ship.dmg must be a positive integer');
+    if (!Number.isInteger(dmg) || dmg < 1 || dmg > FLAGSHIP_MAX_DAMAGE) {
+      throw new Error(`Ship.dmg must be an integer from 1 to ${FLAGSHIP_MAX_DAMAGE}`);
+    }
     if (!Number.isInteger(crewSlots) || crewSlots < 1) {
       throw new Error('Ship.crewSlots must be a positive integer');
     }
@@ -32,10 +41,11 @@ export class Ship {
       crewSlots: 0,
       ...(upgrades ?? {}),
     };
-
-    // Legacy-compatible state only. Destruction/return rules are intentionally
-    // not implemented in FlagshipSystem until Rules v0.3 defines them.
     this.pos = pos;
     this.sunk = sunk;
+  }
+
+  get isOperational() {
+    return !this.sunk && this.hp > 0 && this.pos != null;
   }
 }

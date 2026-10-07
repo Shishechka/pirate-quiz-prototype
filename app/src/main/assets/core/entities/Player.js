@@ -10,6 +10,7 @@ export class Player {
     ship = null,
     boosts = null,
     secret = 1,
+    crewReserve = [],
   }) {
     if (!id) throw new Error('Player.id is required');
     if (!baseId) throw new Error('Player.baseId is required');
@@ -19,6 +20,7 @@ export class Player {
     this.coins = coins;
     this.flags = flags;
     this.ship = ship instanceof Ship ? ship : new Ship(ship ?? { pos: baseId });
+    this.crewReserve = [...crewReserve];
 
     this.boosts = {
       [BOOST_TYPES.SECRET_ROUTE]: secret,

@@ -1,54 +1,55 @@
-# Pirate Quiz Core v0.1
+# Pirate Quiz Core v0.2
 
-This directory is a parallel, UI-independent core extracted from the current Pirate Quiz prototype.
+Core v0.2 is the UI-independent Rules v0.4 implementation branch.
 
-## Scope of v0.1
+## Source of Truth
 
-Implemented here:
+Gameplay rules are defined in:
 
-- GameState
-- Player
-- Territory / Island
-- Base
-- Ship / Flagship
-- Map
-- RoundSystem
-- TurnSystem
+- `docs/PIRATE_QUIZ_RULES_v0.4.md`
 
-Not migrated yet:
+If legacy runtime behavior conflicts with Rules v0.4, Rules v0.4 wins.
 
-- QuestionSystem
-- EconomySystem
-- BoostSystem
-- CombatSystem
-- bot controllers
-- conquest / Stage 2 orchestration
+## Implemented in v0.2
 
-Those systems remain in the legacy runtime until they are migrated in separate tasks with regression tests.
+- central GameState;
+- random base assignment support;
+- 36-island map and topology;
+- Stage 2 settlement with 15-second numeric response validation, integer-only answers,
+  speed tie-breaks and additional tie-break questions;
+- first-neutral-capture boost generation using v0.4 tables;
+- EconomySystem;
+- FameSystem;
+- Flagship model, v0.4 upgrade caps, destruction/return/paid repair;
+- CrewSystem storage/purchase/install/sale rules without crew abilities;
+- Stage 3 one-minute preparation deadline;
+- 8 WAR turns per player plus one final tiebreak round when Fame leaders tie;
+- public battle state so observers can see an attack/question but cannot submit answers;
+- base Fort → Harbor → Flag persistence;
+- first base capture and former-base territory ownership/Fame behavior;
+- defined v0.4 boost effects where the rules are explicit.
+
+## Intentionally unresolved
+
+Rules v0.4 deliberately leaves these mechanics undefined, so Core does not invent them:
+
+- exact flagship-vs-flagship Damage/HP exchange sequence;
+- effects of Compass, Parrot, Powder Keg, Spare Anchor, Mercenary, Spyglass and Cursed Skull;
+- actual abilities of Gunner, Navigator, Carpenter and Quartermaster;
+- maximum CrewSlots;
+- bot/AI behavior.
+
+Combat exposes a defending-flagship phase, but the exact HP exchange remains blocked on a future rules decision.
 
 ## Runtime status
 
-**Core v0.1 is not connected to the current APK runtime.**
+**Core v0.2 is still not connected to the current APK runtime.**
 
-The existing files `game.js`, `ui_patch.js` and visual patches remain the active implementation.
-The purpose of v0.1 is to establish stable data and turn/map boundaries before gameplay migration.
-
-## Legacy baseline
-
-The runtime baseline for comparison is:
-
-- branch: `legacy/pirates-v1.1`
-- commit: `9bf2438322584aae1b643613bdd14d3b11328d31`
+The Android/WebView prototype continues to use legacy `game.js` / UI patches until a separate runtime integration task is approved.
 
 ## Tests
 
-Run from this directory:
-
-```bash
-npm test
-```
-
-or from repository root:
+From repository root:
 
 ```bash
 node --test app/src/main/assets/core/tests/*.test.js

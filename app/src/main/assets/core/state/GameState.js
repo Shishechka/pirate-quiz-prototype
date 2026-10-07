@@ -11,9 +11,18 @@ function createDefaultEconomyState() {
   };
 }
 
+function createDefaultFameState() {
+  return {
+    events: [],
+    nextEventId: 1,
+  };
+}
+
 function createDefaultPreparationState() {
   return {
     readyPlayerIds: [],
+    startedAtMs: null,
+    deadlineAtMs: null,
   };
 }
 
@@ -24,6 +33,11 @@ function createDefaultWarState() {
     turnsTakenByPlayer: Object.fromEntries(
       PLAYER_IDS.map(playerId => [playerId, 0]),
     ),
+    turnActionUsed: false,
+    turnBoostUsed: false,
+    selectedTurnBoost: null,
+    blackMarks: [],
+    tiebreak: null,
   };
 }
 
@@ -34,6 +48,8 @@ function createDefaultArchipelagoState() {
     claimIndex: 0,
     claimedThisRound: [],
     completedRounds: [],
+    pendingRankedResponses: [],
+    pendingTieGroups: [],
   };
 }
 
@@ -44,6 +60,14 @@ function createDefaultQuizState() {
     context: null,
     responses: {},
     ranking: [],
+    deadlineAtMs: null,
+    lockedPlayerIds: [],
+  };
+}
+
+function createDefaultResultState() {
+  return {
+    winnerIds: [],
   };
 }
 
@@ -58,9 +82,11 @@ export class GameState {
     turnIndex = 0,
     archipelagoState = null,
     economyState = null,
+    fameState = null,
     preparationState = null,
     warState = null,
     quizState = null,
+    resultState = null,
   }) {
     if (!isGameStage(stage)) throw new Error(`Unknown game stage: ${stage}`);
 
@@ -79,6 +105,12 @@ export class GameState {
       claimQueue: [...(archipelagoState?.claimQueue ?? [])],
       claimedThisRound: [...(archipelagoState?.claimedThisRound ?? [])],
       completedRounds: [...(archipelagoState?.completedRounds ?? [])],
+      pendingRankedResponses: [...(archipelagoState?.pendingRankedResponses ?? [])].map(
+        response => ({ ...response }),
+      ),
+      pendingTieGroups: [...(archipelagoState?.pendingTieGroups ?? [])].map(
+        group => [...group],
+      ),
     };
 
     this.economyState = {
@@ -87,6 +119,12 @@ export class GameState {
       transactions: [...(economyState?.transactions ?? [])].map(transaction => ({
         ...transaction,
       })),
+    };
+
+    this.fameState = {
+      ...createDefaultFameState(),
+      ...(fameState ?? {}),
+      events: [...(fameState?.events ?? [])].map(event => ({ ...event })),
     };
 
     this.preparationState = {
@@ -98,6 +136,14 @@ export class GameState {
     this.warState = {
       ...createDefaultWarState(),
       ...(warState ?? {}),
+      activeAttack: warState?.activeAttack == null
+        ? null
+        : {
+          ...warState.activeAttack,
+          eligibleResponderIds: [...(warState.activeAttack.eligibleResponderIds ?? [])],
+          observerPlayerIds: [...(warState.activeAttack.observerPlayerIds ?? [])],
+          responses: { ...(warState.activeAttack.responses ?? {}) },
+        },
       battleHistory: [...(warState?.battleHistory ?? [])].map(battle => ({
         ...battle,
       })),
@@ -105,16 +151,31 @@ export class GameState {
         ...createDefaultWarState().turnsTakenByPlayer,
         ...(warState?.turnsTakenByPlayer ?? {}),
       },
+      blackMarks: [...(warState?.blackMarks ?? [])].map(mark => ({ ...mark })),
+      selectedTurnBoost: warState?.selectedTurnBoost == null
+        ? null
+        : { ...warState.selectedTurnBoost },
+      tiebreak: warState?.tiebreak == null
+        ? null
+        : {
+          ...warState.tiebreak,
+          playerIds: [...(warState.tiebreak.playerIds ?? [])],
+          order: [...(warState.tiebreak.order ?? [])],
+        },
     };
 
     this.quizState = {
       ...createDefaultQuizState(),
       ...(quizState ?? {}),
-      responses: {
-        ...createDefaultQuizState().responses,
-        ...(quizState?.responses ?? {}),
-      },
+      responses: { ...(quizState?.responses ?? {}) },
       ranking: [...(quizState?.ranking ?? [])],
+      lockedPlayerIds: [...(quizState?.lockedPlayerIds ?? [])],
+    };
+
+    this.resultState = {
+      ...createDefaultResultState(),
+      ...(resultState ?? {}),
+      winnerIds: [...(resultState?.winnerIds ?? [])],
     };
   }
 
@@ -128,11 +189,17 @@ export class GameState {
   }
 
   get currentTurnOrder() {
+    if (this.warState?.tiebreak?.active) {
+      return [...this.warState.tiebreak.order];
+    }
     return [...(this.turnOrders[this.round - 1] ?? [])];
   }
 
   get currentPlayerId() {
     if (this.finished) return null;
+    if (this.warState?.tiebreak?.active) {
+      return this.warState.tiebreak.order[this.warState.tiebreak.turnIndex] ?? null;
+    }
     return this.currentTurnOrder[this.turnIndex] ?? null;
   }
 

@@ -1,6 +1,5 @@
 import {
   GAME_STAGES,
-  PLAYER_BASES,
   PLAYER_IDS,
 } from './constants.js';
 import { Player } from './entities/Player.js';
@@ -8,9 +7,12 @@ import { Ship } from './entities/Ship.js';
 import { createPirateQuizMap } from './map/Map.js';
 import { GameState } from './state/GameState.js';
 import { ArchipelagoSystem } from './systems/ArchipelagoSystem.js';
+import { BaseSelectionSystem } from './systems/BaseSelectionSystem.js';
 import { BoostSystem } from './systems/BoostSystem.js';
 import { CombatSystem } from './systems/CombatSystem.js';
+import { CrewSystem } from './systems/CrewSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
+import { FameSystem } from './systems/FameSystem.js';
 import { FlagshipSystem } from './systems/FlagshipSystem.js';
 import { RoundSystem } from './systems/RoundSystem.js';
 import { StageSystem } from './systems/StageSystem.js';
@@ -18,9 +20,12 @@ import { TurnSystem } from './systems/TurnSystem.js';
 
 export {
   ArchipelagoSystem,
+  BaseSelectionSystem,
   BoostSystem,
   CombatSystem,
+  CrewSystem,
   EconomySystem,
+  FameSystem,
   FlagshipSystem,
   GameState,
   Player,
@@ -34,21 +39,32 @@ export {
 export function createCoreGame({
   rng = Math.random,
   boostRng = rng,
+  clock = () => 0,
   territoryOwners = {},
+  baseAssignments = null,
   turnOrders = null,
   stage = GAME_STAGES.BASE_SELECTION,
   archipelagoState = null,
   economyState = null,
+  fameState = null,
   economyPrices = null,
   preparationState = null,
   warState = null,
   quizState = null,
+  resultState = null,
 } = {}) {
-  const map = createPirateQuizMap({ territoryOwners });
+  const baseSelectionSystem = new BaseSelectionSystem({ rng });
+  const assignments = baseAssignments ?? baseSelectionSystem.createRandomAssignments();
+  const baseOwners = baseSelectionSystem.toBaseOwners(assignments);
+
+  const map = createPirateQuizMap({
+    territoryOwners,
+    baseOwners,
+  });
 
   const players = new Map();
   for (const playerId of PLAYER_IDS) {
-    const baseId = PLAYER_BASES[playerId];
+    const baseId = assignments[playerId];
     players.set(playerId, new Player({
       id: playerId,
       baseId,
@@ -71,30 +87,53 @@ export function createCoreGame({
     turnOrders: orders,
     archipelagoState,
     economyState,
+    fameState,
     preparationState,
     warState,
     quizState,
+    resultState,
   });
 
-  const boostSystem = new BoostSystem({ rng: boostRng });
   const economySystem = new EconomySystem({
     prices: economyPrices ?? undefined,
   });
+  const fameSystem = new FameSystem();
   const flagshipSystem = new FlagshipSystem({ economySystem });
-  const stageSystem = new StageSystem();
-  const combatSystem = new CombatSystem({ map });
+  const boostSystem = new BoostSystem({
+    rng: boostRng,
+    economySystem,
+    flagshipSystem,
+  });
+  const crewSystem = new CrewSystem({
+    economySystem,
+    flagshipSystem,
+  });
+  const stageSystem = new StageSystem({ clock });
+  const combatSystem = new CombatSystem({
+    map,
+    economySystem,
+    fameSystem,
+    flagshipSystem,
+  });
   const archipelagoSystem = new ArchipelagoSystem({
     map,
     boostSystem,
     stageSystem,
+    rng,
   });
-  const turnSystem = new TurnSystem({ roundSystem });
+  const turnSystem = new TurnSystem({
+    roundSystem,
+    fameSystem,
+  });
 
   return {
     state,
     map,
+    baseSelectionSystem,
     boostSystem,
+    crewSystem,
     economySystem,
+    fameSystem,
     flagshipSystem,
     stageSystem,
     combatSystem,

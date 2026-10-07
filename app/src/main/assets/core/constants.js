@@ -1,3 +1,6 @@
+export const CORE_VERSION = '0.2.0';
+export const RULES_VERSION = '0.4';
+
 export const PLAYER_IDS = Object.freeze(['R', 'B', 'G', 'P']);
 
 export const PLAYER_BASES = Object.freeze({
@@ -32,11 +35,19 @@ export const GAME_STAGE_SEQUENCE = Object.freeze([
   GAME_STAGES.FINISHED,
 ]);
 
+export const QUESTION_TYPES = Object.freeze({
+  NUMERIC: 'NUMERIC',
+  MULTIPLE_CHOICE_4: 'MULTIPLE_CHOICE_4',
+});
+
+export const ARCHIPELAGO_QUESTION_TIME_LIMIT_MS = 15_000;
+export const WAR_QUESTION_TIME_LIMIT_MS = 15_000;
+export const PREPARATION_TIME_LIMIT_MS = 60_000;
+
 export const BOOST_TYPES = Object.freeze({
   EMPTY: 'EMPTY',
   SMALL_CHEST: 'SMALL_CHEST',
   REPAIR_KIT: 'REPAIR_KIT',
-  TAILWIND: 'TAILWIND',
   RECON: 'RECON',
   LARGE_CHEST: 'LARGE_CHEST',
   COMPASS: 'COMPASS',
@@ -56,10 +67,9 @@ export const BOOST_TYPES = Object.freeze({
 
 export const ISLAND_BOOST_TABLES = Object.freeze({
   1: Object.freeze([
-    Object.freeze({ type: BOOST_TYPES.EMPTY, weight: 45 }),
+    Object.freeze({ type: BOOST_TYPES.EMPTY, weight: 55 }),
     Object.freeze({ type: BOOST_TYPES.SMALL_CHEST, weight: 20 }),
     Object.freeze({ type: BOOST_TYPES.REPAIR_KIT, weight: 15 }),
-    Object.freeze({ type: BOOST_TYPES.TAILWIND, weight: 10 }),
     Object.freeze({ type: BOOST_TYPES.RECON, weight: 10 }),
   ]),
   2: Object.freeze([
@@ -84,6 +94,7 @@ export const ISLAND_BOOST_TABLES = Object.freeze({
 });
 
 export const DUBLOON_INCOME_AMOUNTS = Object.freeze([10, 20, 30]);
+export const TERRITORY_CAPTURE_DUBLOONS = 10;
 
 export const ECONOMY_TRANSACTION_TYPES = Object.freeze({
   CREDIT: 'CREDIT',
@@ -102,6 +113,25 @@ export const DEFAULT_ECONOMY_PRICES = Object.freeze({
   [ECONOMY_PRICE_KEYS.SHIP_DAMAGE_UPGRADE]: 30,
   [ECONOMY_PRICE_KEYS.CREW_SLOT]: 30,
   [ECONOMY_PRICE_KEYS.CREW_MEMBER]: 20,
+});
+
+export const FLAGSHIP_MAX_HP = 5;
+export const FLAGSHIP_MAX_DAMAGE = 3;
+export const FLAGSHIP_REPAIR_HP_COST = 20;
+
+export const CREW_TYPES = Object.freeze({
+  GUNNER: 'GUNNER',
+  NAVIGATOR: 'NAVIGATOR',
+  CARPENTER: 'CARPENTER',
+  QUARTERMASTER: 'QUARTERMASTER',
+});
+export const CREW_SELL_DUBLOONS = 10;
+
+export const FAME_REWARDS = Object.freeze({
+  SUCCESSFUL_DEFENSE: 2,
+  FIRST_BASE_CAPTURE: 9,
+  BASE_LOSS_PENALTY: 5,
+  FORMER_BASE_CAPTURE: 4,
 });
 
 export const ARCHIPELAGO_ROUND_COUNT = 6;

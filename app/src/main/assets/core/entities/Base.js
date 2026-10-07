@@ -27,7 +27,6 @@ function createLayersFromRemaining(remainingLayers) {
 
 function validateLayers(layers) {
   const normalized = {};
-
   for (const layer of BASE_LAYER_SEQUENCE) {
     const status = layers?.[layer];
     if (!Object.values(BASE_LAYER_STATUS).includes(status)) {
@@ -35,18 +34,6 @@ function validateLayers(layers) {
     }
     normalized[layer] = status;
   }
-
-  let activeSeen = false;
-  for (const layer of BASE_LAYER_SEQUENCE) {
-    if (normalized[layer] === BASE_LAYER_STATUS.ACTIVE) {
-      activeSeen = true;
-      continue;
-    }
-    if (activeSeen) {
-      throw new Error('Base layers must be destroyed sequentially: Fort → Harbor → Flag');
-    }
-  }
-
   return normalized;
 }
 
@@ -54,27 +41,35 @@ export class Base {
   constructor({
     id,
     ownerId,
+    originalOwnerId = ownerId,
     remainingLayers = 3,
     layers = null,
     capturedBy = null,
+    captureCount = 0,
+    isActiveBase = true,
+    lossPenaltyApplied = false,
     connections = [],
   }) {
     if (!id) throw new Error('Base.id is required');
     if (!ownerId) throw new Error('Base.ownerId is required');
+    if (!originalOwnerId) throw new Error('Base.originalOwnerId is required');
 
     this.id = id;
     this.ownerId = ownerId;
+    this.originalOwnerId = originalOwnerId;
     this.layers = layers == null
       ? createLayersFromRemaining(remainingLayers)
       : validateLayers(layers);
     this.capturedBy = capturedBy;
+    this.captureCount = captureCount;
+    this.isActiveBase = isActiveBase;
+    this.lossPenaltyApplied = lossPenaltyApplied;
     this.connections = [...connections];
 
-    if (
-      this.capturedBy != null
-      && this.layers.flag !== BASE_LAYER_STATUS.DESTROYED
-    ) {
-      throw new Error('Captured base must have destroyed Captain Flag');
+    if (!this.isActiveBase) {
+      this.layers = Object.fromEntries(
+        BASE_LAYER_SEQUENCE.map(layer => [layer, BASE_LAYER_STATUS.DESTROYED]),
+      );
     }
   }
 
@@ -89,23 +84,47 @@ export class Base {
   }
 
   get currentLayer() {
+    if (!this.isActiveBase) return null;
     return BASE_LAYER_SEQUENCE.find(
       layer => this.layers[layer] === BASE_LAYER_STATUS.ACTIVE,
     ) ?? null;
   }
 
   get isCaptured() {
-    return (
-      this.layers.flag === BASE_LAYER_STATUS.DESTROYED
-      && this.capturedBy != null
-    );
+    return !this.isActiveBase;
   }
 
   destroyCurrentLayer() {
+    if (!this.isActiveBase) throw new Error(`Base ${this.id} is no longer an active base`);
     const layer = this.currentLayer;
     if (layer == null) throw new Error(`Base ${this.id} has no active defense layer`);
 
     this.layers[layer] = BASE_LAYER_STATUS.DESTROYED;
     return layer;
+  }
+
+  restoreFort() {
+    if (!this.isActiveBase) throw new Error('Cannot restore Fort after full base loss');
+    this.layers.fort = BASE_LAYER_STATUS.ACTIVE;
+    return this.layers.fort;
+  }
+
+  convertToFormerBase(newOwnerId) {
+    if (!newOwnerId) throw new Error('newOwnerId is required');
+    this.ownerId = newOwnerId;
+    this.capturedBy = newOwnerId;
+    this.captureCount += 1;
+    this.isActiveBase = false;
+    this.layers = Object.fromEntries(
+      BASE_LAYER_SEQUENCE.map(layer => [layer, BASE_LAYER_STATUS.DESTROYED]),
+    );
+  }
+
+  captureFormerBase(newOwnerId) {
+    if (this.isActiveBase) throw new Error('Active base must be captured through its defense layers');
+    if (!newOwnerId) throw new Error('newOwnerId is required');
+    this.ownerId = newOwnerId;
+    this.capturedBy = newOwnerId;
+    this.captureCount += 1;
   }
 }

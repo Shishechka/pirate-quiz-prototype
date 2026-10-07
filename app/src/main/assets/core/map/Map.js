@@ -39,7 +39,10 @@ export class GameMap {
   }
 }
 
-export function createPirateQuizMap({ territoryOwners = {} } = {}) {
+export function createPirateQuizMap({
+  territoryOwners = {},
+  baseOwners = BASE_OWNERS,
+} = {}) {
   const adjacency = new Map();
 
   const ensureNode = id => {
@@ -93,9 +96,12 @@ export function createPirateQuizMap({ territoryOwners = {} } = {}) {
 
   const bases = new Map();
   for (const baseId of BASE_IDS) {
+    const ownerId = baseOwners[baseId];
+    if (!ownerId) throw new Error(`Missing owner for base ${baseId}`);
     bases.set(baseId, new Base({
       id: baseId,
-      ownerId: BASE_OWNERS[baseId],
+      ownerId,
+      originalOwnerId: ownerId,
       connections: adjacency.get(nodeKey(baseId)),
     }));
   }

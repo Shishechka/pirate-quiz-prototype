@@ -1,5 +1,6 @@
 import {
   BOOST_TYPES,
+  GAME_STAGES,
   ISLAND_BOOST_TABLES,
 } from '../constants.js';
 
@@ -26,8 +27,14 @@ for (const [level, table] of Object.entries(ISLAND_BOOST_TABLES)) {
 }
 
 export class BoostSystem {
-  constructor({ rng = Math.random } = {}) {
+  constructor({
+    rng = Math.random,
+    economySystem = null,
+    flagshipSystem = null,
+  } = {}) {
     this.rng = rng;
+    this.economySystem = economySystem;
+    this.flagshipSystem = flagshipSystem;
   }
 
   generateForIslandLevel(level) {
@@ -72,6 +79,174 @@ export class BoostSystem {
       granted: true,
       count: player.boosts[boostType],
     };
+  }
+
+  consumeFromInventory(state, playerId, boostType) {
+    const count = this.getInventoryCount(state, playerId, boostType);
+    if (count <= 0) throw new Error(`Player ${playerId} does not have boost ${boostType}`);
+    state.players.get(playerId).boosts[boostType] = count - 1;
+  }
+
+  assertOwnWarTurnBoostAvailable(state, playerId) {
+    if (state.stage !== GAME_STAGES.WAR || state.currentPlayerId !== playerId) {
+      throw new Error('This boost must be used during the player own WAR turn');
+    }
+    if (state.warState.turnBoostUsed) {
+      throw new Error('Only one boost can be used per WAR turn');
+    }
+  }
+
+  markTurnBoostUsed(state, playerId, boostType) {
+    state.warState.turnBoostUsed = true;
+    state.warState.selectedTurnBoost = {
+      playerId,
+      boostType,
+    };
+  }
+
+  prepareAttackBoost({ state, playerId, boostType }) {
+    if (![BOOST_TYPES.RECON, BOOST_TYPES.SECRET_ROUTE, BOOST_TYPES.DOUBLE_VOLLEY].includes(boostType)) {
+      throw new Error('Boost is not an attack-preparation boost');
+    }
+    this.assertOwnWarTurnBoostAvailable(state, playerId);
+    if (state.warState.turnActionUsed) {
+      throw new Error('Attack boost must be selected before choosing the target');
+    }
+
+    this.consumeFromInventory(state, playerId, boostType);
+    this.markTurnBoostUsed(state, playerId, boostType);
+
+    return { ...state.warState.selectedTurnBoost };
+  }
+
+  useBoost({
+    state,
+    playerId,
+    boostType,
+    targetPlayerId = null,
+  }) {
+    if ([BOOST_TYPES.RECON, BOOST_TYPES.SECRET_ROUTE, BOOST_TYPES.DOUBLE_VOLLEY].includes(boostType)) {
+      return this.prepareAttackBoost({ state, playerId, boostType });
+    }
+
+    if (state.stage === GAME_STAGES.WAR) {
+      this.assertOwnWarTurnBoostAvailable(state, playerId);
+    }
+
+    const markIfWar = () => {
+      if (state.stage === GAME_STAGES.WAR) {
+        this.markTurnBoostUsed(state, playerId, boostType);
+      }
+    };
+
+    if (boostType === BOOST_TYPES.SMALL_CHEST) {
+      if (!this.economySystem) throw new Error('EconomySystem is required');
+      this.consumeFromInventory(state, playerId, boostType);
+      const transaction = this.economySystem.credit({
+        state,
+        playerId,
+        amount: 10,
+        reason: 'BOOST_SMALL_CHEST',
+      });
+      markIfWar();
+      return { boostType, transaction };
+    }
+
+    if (boostType === BOOST_TYPES.LARGE_CHEST) {
+      if (!this.economySystem) throw new Error('EconomySystem is required');
+      this.consumeFromInventory(state, playerId, boostType);
+      const transaction = this.economySystem.credit({
+        state,
+        playerId,
+        amount: 20,
+        reason: 'BOOST_LARGE_CHEST',
+      });
+      markIfWar();
+      return { boostType, transaction };
+    }
+
+    if (boostType === BOOST_TYPES.TREASURE) {
+      if (!this.economySystem) throw new Error('EconomySystem is required');
+      this.consumeFromInventory(state, playerId, boostType);
+      const transaction = this.economySystem.credit({
+        state,
+        playerId,
+        amount: 30,
+        reason: 'BOOST_TREASURE',
+      });
+      markIfWar();
+      return { boostType, transaction };
+    }
+
+    if (boostType === BOOST_TYPES.REPAIR_KIT) {
+      if (!this.flagshipSystem) throw new Error('FlagshipSystem is required');
+      this.consumeFromInventory(state, playerId, boostType);
+      const repair = this.flagshipSystem.restoreHpFromBoost({
+        state,
+        playerId,
+        points: 2,
+      });
+      markIfWar();
+      return { boostType, repair };
+    }
+
+    if (boostType === BOOST_TYPES.FORT_RESTORATION) {
+      const player = state.players.get(playerId);
+      const base = state.bases.get(player.baseId);
+      if (!base?.isActiveBase || base.ownerId !== playerId) {
+        throw new Error('Fort Restoration requires the player active own base');
+      }
+      this.consumeFromInventory(state, playerId, boostType);
+      base.restoreFort();
+      markIfWar();
+      return { boostType, fortStatus: base.layers.fort };
+    }
+
+    if (boostType === BOOST_TYPES.BLACK_MARK) {
+      if (!targetPlayerId || !state.players.has(targetPlayerId) || targetPlayerId === playerId) {
+        throw new Error('Black Mark requires another player as target');
+      }
+      this.consumeFromInventory(state, playerId, boostType);
+      state.warState.blackMarks.push({
+        protectedPlayerId: playerId,
+        targetPlayerId,
+      });
+      this.markTurnBoostUsed(state, playerId, boostType);
+      return {
+        boostType,
+        protectedPlayerId: playerId,
+        targetPlayerId,
+      };
+    }
+
+    if (boostType === BOOST_TYPES.SECOND_CHANCE) {
+      const attack = state.warState.activeAttack;
+      if (!attack || attack.lastQuestionResult?.loserId !== playerId) {
+        throw new Error('Second Chance requires a lost active battle question');
+      }
+      this.consumeFromInventory(state, playerId, boostType);
+      attack.phase = 'QUESTION';
+      attack.questionType = 'MULTIPLE_CHOICE_4';
+      attack.responses = {};
+      attack.lastQuestionResult = null;
+      attack.secondChanceUsedBy = playerId;
+      this.markTurnBoostUsed(state, playerId, boostType);
+      return { boostType, replayQuestion: true };
+    }
+
+    if ([
+      BOOST_TYPES.COMPASS,
+      BOOST_TYPES.PARROT,
+      BOOST_TYPES.POWDER_KEG,
+      BOOST_TYPES.SPARE_ANCHOR,
+      BOOST_TYPES.MERCENARY,
+      BOOST_TYPES.SPYGLASS,
+      BOOST_TYPES.CURSED_SKULL,
+    ].includes(boostType)) {
+      throw new Error(`Boost effect ${boostType} is intentionally undefined in Rules v0.4`);
+    }
+
+    throw new Error(`Unsupported boost: ${boostType}`);
   }
 
   resolveTerritoryCapture({
