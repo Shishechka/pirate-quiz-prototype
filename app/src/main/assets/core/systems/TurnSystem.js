@@ -1,5 +1,6 @@
 import {
   GAME_STAGES,
+  PLAYER_IDS,
   TURNS_PER_ROUND,
 } from '../constants.js';
 
@@ -25,7 +26,9 @@ export class TurnSystem {
   clearCompletedTurnState(state, completedPlayerId) {
     state.warState.activeAttack = null;
     state.warState.turnActionUsed = false;
-    state.warState.turnBoostUsed = false;
+    state.warState.boostUsedByPlayer = Object.fromEntries(
+      PLAYER_IDS.map(playerId => [playerId, null]),
+    );
     state.warState.selectedTurnBoost = null;
     state.warState.blackMarks = state.warState.blackMarks.filter(
       mark => mark.targetPlayerId !== completedPlayerId,
