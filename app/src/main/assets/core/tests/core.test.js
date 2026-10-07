@@ -929,7 +929,10 @@ test('flagship starts with Rules v0.4 base characteristics', () => {
 
 test('buying +1 HP costs 20 dubloons and increases current and maximum HP', () => {
   const game = createCoreGame({
-    baseAssignments: PLAYER_BASES, rng: fixedRng() });
+    baseAssignments: PLAYER_BASES,
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+  });
 
   assert.equal(game.flagshipSystem.canPurchaseHpUpgrade(game.state, 'R'), true);
 
@@ -949,7 +952,10 @@ test('buying +1 HP costs 20 dubloons and increases current and maximum HP', () =
 
 test('buying +1 Damage costs 30 dubloons and increases damage by one', () => {
   const game = createCoreGame({
-    baseAssignments: PLAYER_BASES, rng: fixedRng() });
+    baseAssignments: PLAYER_BASES,
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+  });
 
   game.economySystem.credit({
     state: game.state,
@@ -973,7 +979,10 @@ test('buying +1 Damage costs 30 dubloons and increases damage by one', () => {
 
 test('buying +1 Crew Slot costs 30 dubloons and increases capacity by one', () => {
   const game = createCoreGame({
-    baseAssignments: PLAYER_BASES, rng: fixedRng() });
+    baseAssignments: PLAYER_BASES,
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+  });
 
   game.economySystem.credit({
     state: game.state,
@@ -997,7 +1006,10 @@ test('buying +1 Crew Slot costs 30 dubloons and increases capacity by one', () =
 
 test('flagship upgrades cannot spend more dubloons than the player has', () => {
   const game = createCoreGame({
-    baseAssignments: PLAYER_BASES, rng: fixedRng() });
+    baseAssignments: PLAYER_BASES,
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+  });
   const ship = game.flagshipSystem.getFlagship(game.state, 'R');
   const before = {
     balance: game.economySystem.getBalance(game.state, 'R'),
@@ -1053,21 +1065,28 @@ test('flagship stores installed crew and enforces available crew slots only', ()
   );
 });
 
-test('destruction and return state is not changed by flagship upgrade purchases', () => {
+test('destroyed flagship cannot receive upgrades', () => {
   const game = createCoreGame({
-    baseAssignments: PLAYER_BASES, rng: fixedRng() });
+    baseAssignments: PLAYER_BASES,
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+  });
   const ship = game.flagshipSystem.getFlagship(game.state, 'R');
 
+  ship.hp = 0;
   ship.sunk = true;
-  ship.pos = null;
+  ship.pos = 'A';
 
-  game.flagshipSystem.purchaseHpUpgrade({
-    state: game.state,
-    playerId: 'R',
-  });
+  assert.throws(
+    () => game.flagshipSystem.purchaseHpUpgrade({
+      state: game.state,
+      playerId: 'R',
+    }),
+    /Destroyed flagship cannot receive upgrades/,
+  );
 
-  assert.equal(ship.sunk, true);
-  assert.equal(ship.pos, null);
+  assert.equal(ship.hp, 0);
+  assert.equal(ship.maxHp, 3);
 });
 
 test('Stage 2 completion transitions to PREPARATION only after all 36 islands are owned', () => {
