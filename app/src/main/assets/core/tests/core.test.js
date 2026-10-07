@@ -1518,6 +1518,11 @@ test('repeated base assault resumes from the first surviving level', () => {
     defenderCorrect: false,
   });
 
+  // Defender victory ends the current assault. Resume only on R's next turn.
+  for (let step = 0; step < 4; step++) {
+    game.turnSystem.advance(game.state);
+  }
+
   const repeatedAssault = game.combatSystem.resolveBaseBattle({
     state: game.state,
     attackerId: 'R',
@@ -1596,6 +1601,10 @@ test('captured base cannot be assaulted again as an active base', () => {
     });
   }
 
+  for (let step = 0; step < 4; step++) {
+    game.turnSystem.advance(game.state);
+  }
+
   assert.equal(game.combatSystem.canAttackBase(game.state, 'R', 'B'), false);
   assert.throws(
     () => game.combatSystem.resolveBaseBattle({
@@ -1605,7 +1614,7 @@ test('captured base cannot be assaulted again as an active base', () => {
       attackerCorrect: true,
       defenderCorrect: false,
     }),
-    /former-base territory/,
+    /Base attack is not legal/,
   );
 });
 
