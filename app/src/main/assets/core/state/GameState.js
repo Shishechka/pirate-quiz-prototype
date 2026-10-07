@@ -1,5 +1,6 @@
 import {
   GAME_STAGES,
+  PLAYER_IDS,
   isGameStage,
 } from '../constants.js';
 
@@ -10,9 +11,19 @@ function createDefaultEconomyState() {
   };
 }
 
+function createDefaultPreparationState() {
+  return {
+    readyPlayerIds: [],
+  };
+}
+
 function createDefaultWarState() {
   return {
     activeAttack: null,
+    battleHistory: [],
+    turnsTakenByPlayer: Object.fromEntries(
+      PLAYER_IDS.map(playerId => [playerId, 0]),
+    ),
   };
 }
 
@@ -47,6 +58,7 @@ export class GameState {
     turnIndex = 0,
     archipelagoState = null,
     economyState = null,
+    preparationState = null,
     warState = null,
     quizState = null,
   }) {
@@ -77,9 +89,22 @@ export class GameState {
       })),
     };
 
+    this.preparationState = {
+      ...createDefaultPreparationState(),
+      ...(preparationState ?? {}),
+      readyPlayerIds: [...(preparationState?.readyPlayerIds ?? [])],
+    };
+
     this.warState = {
       ...createDefaultWarState(),
       ...(warState ?? {}),
+      battleHistory: [...(warState?.battleHistory ?? [])].map(battle => ({
+        ...battle,
+      })),
+      turnsTakenByPlayer: {
+        ...createDefaultWarState().turnsTakenByPlayer,
+        ...(warState?.turnsTakenByPlayer ?? {}),
+      },
     };
 
     this.quizState = {

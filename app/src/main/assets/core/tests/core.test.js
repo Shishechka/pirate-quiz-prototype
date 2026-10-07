@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   BoostSystem,
+  CombatSystem,
   EconomySystem,
   createCoreGame,
   createPirateQuizMap,
@@ -40,6 +41,26 @@ function responsesForRanking(ranking, correctAnswer = 100) {
   return Object.fromEntries(
     ranking.map((playerId, index) => [playerId, correctAnswer + index + 1]),
   );
+}
+
+function warTurnOrders() {
+  return Array.from({ length: WAR_ROUND_COUNT }, () => ['R', 'B', 'G', 'P']);
+}
+
+function createBasicWarGame({
+  targetTerritoryId = 2,
+  defenderId = 'B',
+} = {}) {
+  const territoryOwners = {};
+  for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
+  territoryOwners[targetTerritoryId] = defenderId;
+
+  return createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.WAR,
+    territoryOwners,
+    turnOrders: warTurnOrders(),
+  });
 }
 
 function completeArchipelagoRound(game, ranking = PLAYER_IDS) {
@@ -113,7 +134,19 @@ test('GameState is created with the complete central game state', () => {
     transactions: [],
     nextTransactionId: 1,
   });
-  assert.deepEqual(state.warState, { activeAttack: null });
+  assert.deepEqual(state.preparationState, {
+    readyPlayerIds: [],
+  });
+  assert.deepEqual(state.warState, {
+    activeAttack: null,
+    battleHistory: [],
+    turnsTakenByPlayer: {
+      R: 0,
+      B: 0,
+      G: 0,
+      P: 0,
+    },
+  });
   assert.deepEqual(state.quizState, {
     currentQuestion: null,
     questionType: null,
@@ -957,6 +990,264 @@ test('destruction and return state is not changed by flagship upgrade purchases'
   assert.equal(ship.pos, null);
 });
 
+test('Stage 2 completion transitions to PREPARATION only after all 36 islands are owned', () => {
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.ARCHIPELAGO,
+  });
+
+  for (let round = 1; round <= ARCHIPELAGO_ROUND_COUNT; round++) {
+    completeArchipelagoRound(game, ['R', 'B', 'G', 'P']);
+  }
+
+  assert.equal(game.state.stage, GAME_STAGES.PREPARATION);
+  assert.equal(
+    [...game.state.territories.values()].filter(territory => territory.ownerId == null).length,
+    0,
+  );
+  assert.deepEqual(game.state.preparationState.readyPlayerIds, []);
+});
+
+test('PREPARATION allows spending accumulated dubloons before WAR starts', () => {
+  const territoryOwners = {};
+  for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
+
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+    territoryOwners,
+    turnOrders: warTurnOrders(),
+  });
+
+  const balanceBefore = game.economySystem.getBalance(game.state, 'R');
+
+  game.flagshipSystem.purchaseHpUpgrade({
+    state: game.state,
+    playerId: 'R',
+  });
+
+  assert.equal(game.state.stage, GAME_STAGES.PREPARATION);
+  assert.equal(
+    game.economySystem.getBalance(game.state, 'R'),
+    balanceBefore - 20,
+  );
+});
+
+test('PREPARATION transitions to WAR when all 4 players are ready', () => {
+  const territoryOwners = {};
+  for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
+
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+    territoryOwners,
+    turnOrders: warTurnOrders(),
+  });
+
+  game.stageSystem.markPlayerReady(game.state, 'R');
+  game.stageSystem.markPlayerReady(game.state, 'B');
+  game.stageSystem.markPlayerReady(game.state, 'G');
+
+  assert.equal(game.state.stage, GAME_STAGES.PREPARATION);
+
+  game.stageSystem.markPlayerReady(game.state, 'P');
+
+  assert.equal(game.state.stage, GAME_STAGES.WAR);
+  assert.equal(game.state.round, 1);
+  assert.equal(game.state.turnIndex, 0);
+  assert.deepEqual(game.state.warState.turnsTakenByPlayer, {
+    R: 0,
+    B: 0,
+    G: 0,
+    P: 0,
+  });
+});
+
+test('WAR cannot start while any neutral territory remains', () => {
+  const territoryOwners = {};
+  for (let id = 1; id < TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
+
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.PREPARATION,
+    territoryOwners,
+    turnOrders: warTurnOrders(),
+    preparationState: {
+      readyPlayerIds: ['R', 'B', 'G', 'P'],
+    },
+  });
+
+  assert.throws(
+    () => game.stageSystem.startWar(game.state),
+    /neutral territories remain/,
+  );
+  assert.equal(game.state.stage, GAME_STAGES.PREPARATION);
+});
+
+test('WAR gives exactly 8 completed turns to every player', () => {
+  const territoryOwners = {};
+  for (let id = 1; id <= TERRITORY_COUNT; id++) territoryOwners[id] = 'R';
+
+  const game = createCoreGame({
+    rng: fixedRng(),
+    stage: GAME_STAGES.WAR,
+    territoryOwners,
+    turnOrders: warTurnOrders(),
+  });
+
+  while (!game.state.finished) {
+    game.turnSystem.advance(game.state);
+  }
+
+  assert.deepEqual(game.state.warState.turnsTakenByPlayer, {
+    R: 8,
+    B: 8,
+    G: 8,
+    P: 8,
+  });
+  assert.equal(game.state.stage, GAME_STAGES.FINISHED);
+});
+
+test('capturing or destroying a base does not automatically finish WAR', () => {
+  const game = createBasicWarGame();
+
+  const base = game.state.bases.get('A');
+  base.remainingLayers = 0;
+  base.capturedBy = 'B';
+
+  assert.equal(game.state.stage, GAME_STAGES.WAR);
+  assert.equal(game.state.finished, false);
+});
+
+test('WAR attack rejects own, neutral and disconnected territories', () => {
+  const game = createBasicWarGame();
+
+  assert.equal(game.combatSystem.canAttackTerritory(game.state, 'R', 1), false);
+
+  game.state.territories.get(2).ownerId = null;
+  assert.equal(game.combatSystem.canAttackTerritory(game.state, 'R', 2), false);
+
+  game.state.territories.get(2).ownerId = 'B';
+  game.state.territories.get(30).ownerId = 'B';
+  game.state.territories.get(35).ownerId = 'B';
+  game.state.territories.get(36).ownerId = 'B';
+
+  assert.equal(game.combatSystem.canAttackTerritory(game.state, 'R', 36), false);
+});
+
+test('combat outcome: attacker correct and defender wrong gives territory to attacker', () => {
+  const game = createBasicWarGame();
+
+  const result = game.combatSystem.resolveTerritoryBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetTerritoryId: 2,
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  assert.equal(result.winnerId, 'R');
+  assert.equal(result.result, 'ATTACKER_CORRECT_DEFENDER_WRONG');
+  assert.equal(game.state.territories.get(2).ownerId, 'R');
+});
+
+test('combat outcome: attacker wrong and defender correct keeps territory with defender', () => {
+  const game = createBasicWarGame();
+
+  const result = game.combatSystem.resolveTerritoryBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetTerritoryId: 2,
+    attackerCorrect: false,
+    defenderCorrect: true,
+  });
+
+  assert.equal(result.winnerId, 'B');
+  assert.equal(result.result, 'ATTACKER_WRONG_DEFENDER_CORRECT');
+  assert.equal(game.state.territories.get(2).ownerId, 'B');
+});
+
+test('combat outcome: both wrong gives victory to defender', () => {
+  const game = createBasicWarGame();
+
+  const result = game.combatSystem.resolveTerritoryBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetTerritoryId: 2,
+    attackerCorrect: false,
+    defenderCorrect: false,
+  });
+
+  assert.equal(result.winnerId, 'B');
+  assert.equal(result.result, 'BOTH_WRONG_DEFENDER_WINS');
+  assert.equal(game.state.territories.get(2).ownerId, 'B');
+});
+
+test('combat outcome: both correct and attacker closer in numeric duel gives territory to attacker', () => {
+  const game = createBasicWarGame();
+
+  const result = game.combatSystem.resolveTerritoryBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetTerritoryId: 2,
+    attackerCorrect: true,
+    defenderCorrect: true,
+    numericDuel: {
+      correctAnswer: 100,
+      attackerAnswer: 101,
+      defenderAnswer: 104,
+    },
+  });
+
+  assert.equal(result.winnerId, 'R');
+  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_ATTACKER_CLOSER');
+  assert.equal(game.state.territories.get(2).ownerId, 'R');
+});
+
+test('combat outcome: both correct and defender closer in numeric duel keeps territory with defender', () => {
+  const game = createBasicWarGame();
+
+  const result = game.combatSystem.resolveTerritoryBattle({
+    state: game.state,
+    attackerId: 'R',
+    targetTerritoryId: 2,
+    attackerCorrect: true,
+    defenderCorrect: true,
+    numericDuel: {
+      correctAnswer: 100,
+      attackerAnswer: 105,
+      defenderAnswer: 101,
+    },
+  });
+
+  assert.equal(result.winnerId, 'B');
+  assert.equal(result.result, 'BOTH_CORRECT_NUMERIC_DEFENDER_CLOSER');
+  assert.equal(game.state.territories.get(2).ownerId, 'B');
+});
+
+test('equal numeric duel distance remains explicitly unresolved', () => {
+  const game = createBasicWarGame();
+
+  assert.throws(
+    () => game.combatSystem.resolveTerritoryBattle({
+      state: game.state,
+      attackerId: 'R',
+      targetTerritoryId: 2,
+      attackerCorrect: true,
+      defenderCorrect: true,
+      numericDuel: {
+        correctAnswer: 100,
+        attackerAnswer: 99,
+        defenderAnswer: 101,
+      },
+    }),
+    /Numeric duel tie is unresolved/,
+  );
+
+  assert.equal(game.state.territories.get(2).ownerId, 'B');
+  assert.equal(game.state.warState.battleHistory.length, 0);
+});
+
 test('RoundSystem creates 8 rounds and every round contains each player exactly once', () => {
   const rounds = new RoundSystem({ rng: fixedRng() });
   const orders = rounds.createTurnOrders();
@@ -1011,9 +1302,11 @@ test('core modules have no direct browser UI dependency', () => {
     'map/Map.js',
     'systems/ArchipelagoSystem.js',
     'systems/BoostSystem.js',
+    'systems/CombatSystem.js',
     'systems/EconomySystem.js',
     'systems/FlagshipSystem.js',
     'systems/RoundSystem.js',
+    'systems/StageSystem.js',
     'systems/TurnSystem.js',
   ];
 

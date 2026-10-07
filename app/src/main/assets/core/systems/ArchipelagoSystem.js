@@ -6,6 +6,7 @@ import {
   PLAYER_IDS,
 } from '../constants.js';
 import { BoostSystem } from './BoostSystem.js';
+import { StageSystem } from './StageSystem.js';
 
 function assertFiniteNumber(value, label) {
   if (!Number.isFinite(value)) throw new Error(`${label} must be a finite number`);
@@ -18,10 +19,15 @@ function countByPlayer(claims) {
 }
 
 export class ArchipelagoSystem {
-  constructor({ map, boostSystem = new BoostSystem() }) {
+  constructor({
+    map,
+    boostSystem = new BoostSystem(),
+    stageSystem = new StageSystem(),
+  }) {
     if (!map) throw new Error('ArchipelagoSystem requires GameMap');
     this.map = map;
     this.boostSystem = boostSystem;
+    this.stageSystem = stageSystem;
   }
 
   assertArchipelagoStage(state) {
@@ -238,7 +244,7 @@ export class ArchipelagoSystem {
           `ARCHIPELAGO finished with ${neutral.length} neutral territories remaining`,
         );
       }
-      state.stage = GAME_STAGES.PREPARATION;
+      this.stageSystem.completeArchipelago(state);
       return;
     }
 

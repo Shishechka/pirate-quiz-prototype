@@ -9,14 +9,17 @@ import { createPirateQuizMap } from './map/Map.js';
 import { GameState } from './state/GameState.js';
 import { ArchipelagoSystem } from './systems/ArchipelagoSystem.js';
 import { BoostSystem } from './systems/BoostSystem.js';
+import { CombatSystem } from './systems/CombatSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { FlagshipSystem } from './systems/FlagshipSystem.js';
 import { RoundSystem } from './systems/RoundSystem.js';
+import { StageSystem } from './systems/StageSystem.js';
 import { TurnSystem } from './systems/TurnSystem.js';
 
 export {
   ArchipelagoSystem,
   BoostSystem,
+  CombatSystem,
   EconomySystem,
   FlagshipSystem,
   GameState,
@@ -24,6 +27,7 @@ export {
   Ship,
   createPirateQuizMap,
   RoundSystem,
+  StageSystem,
   TurnSystem,
 };
 
@@ -36,6 +40,7 @@ export function createCoreGame({
   archipelagoState = null,
   economyState = null,
   economyPrices = null,
+  preparationState = null,
   warState = null,
   quizState = null,
 } = {}) {
@@ -66,6 +71,7 @@ export function createCoreGame({
     turnOrders: orders,
     archipelagoState,
     economyState,
+    preparationState,
     warState,
     quizState,
   });
@@ -75,7 +81,13 @@ export function createCoreGame({
     prices: economyPrices ?? undefined,
   });
   const flagshipSystem = new FlagshipSystem({ economySystem });
-  const archipelagoSystem = new ArchipelagoSystem({ map, boostSystem });
+  const stageSystem = new StageSystem();
+  const combatSystem = new CombatSystem({ map });
+  const archipelagoSystem = new ArchipelagoSystem({
+    map,
+    boostSystem,
+    stageSystem,
+  });
   const turnSystem = new TurnSystem({ roundSystem });
 
   return {
@@ -84,6 +96,8 @@ export function createCoreGame({
     boostSystem,
     economySystem,
     flagshipSystem,
+    stageSystem,
+    combatSystem,
     archipelagoSystem,
     roundSystem,
     turnSystem,
