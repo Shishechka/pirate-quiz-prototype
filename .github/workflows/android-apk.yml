@@ -40,6 +40,9 @@ jobs:
           assert "GAME_STAGES.WAR" in runtime
           assert "previewActiveQuestionOutcome" in runtime
           assert "commitActiveQuestionResult" in runtime
+          assert "humanPhase = 'READY_TO_START'" in runtime
+          assert "▶ Начать освоение" in runtime
+          assert "setTimeout(() => {\n    if (game.state.stage === GAME_STAGES.ARCHIPELAGO) {\n      startArchipelagoQuestion();" not in runtime
           assert "https://" in activity and "appassets.local" in activity
           assert "shouldInterceptRequest" in activity
           print("Rules v0.4 runtime sanity: OK")
