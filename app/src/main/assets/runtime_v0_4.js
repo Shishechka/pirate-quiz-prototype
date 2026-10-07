@@ -568,7 +568,7 @@ function renderBoostButtons() {
     && game.state.currentPlayerId === HUMAN
     && humanPhase === 'ATTACK'
     && secretCount > 0
-    && !game.state.warState.turnBoostUsed
+    && !game.boostSystem.hasPlayerUsedBoost(game.state, HUMAN)
     && !game.state.warState.turnActionUsed
   );
 
@@ -596,10 +596,11 @@ function renderBoostButtons() {
     ].includes(type);
 
     const damageBlocked = type === BOOST_TYPES.DOUBLE_VOLLEY;
-    button.disabled = unresolved || damageBlocked || !(
+    const reactiveOnly = type === BOOST_TYPES.SECOND_CHANCE;
+    button.disabled = unresolved || damageBlocked || reactiveOnly || !(
       game.state.stage === GAME_STAGES.WAR
       && game.state.currentPlayerId === HUMAN
-      && !game.state.warState.turnBoostUsed
+      && !game.boostSystem.hasPlayerUsedBoost(game.state, HUMAN)
     );
     button.onclick = () => useHumanBoost(type);
     stack.appendChild(button);
@@ -1419,7 +1420,7 @@ function previewBattleResult(payload) {
   );
   const canUseSecondChance = (
     secondChanceCount > 0
-    && !game.state.warState.turnBoostUsed
+    && !game.boostSystem.hasPlayerUsedBoost(game.state, loser)
   );
 
   if (!canUseSecondChance) {
