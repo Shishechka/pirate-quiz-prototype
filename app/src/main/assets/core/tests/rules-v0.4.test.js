@@ -365,7 +365,7 @@ test('Crew costs 20, cannot be duplicated, is changed only at active base and se
   assert.equal(sale.transaction.amount, 10);
 });
 
-test('one WAR turn permits only one boost', () => {
+test('one WAR turn permits only one boost per player', () => {
   const game = createWarGame();
   game.boostSystem.grantToPlayer(game.state, 'R', BOOST_TYPES.SMALL_CHEST);
   game.boostSystem.grantToPlayer(game.state, 'R', BOOST_TYPES.LARGE_CHEST);
@@ -382,7 +382,7 @@ test('one WAR turn permits only one boost', () => {
       playerId: 'R',
       boostType: BOOST_TYPES.LARGE_CHEST,
     }),
-    /Only one boost/,
+    /Only one boost per player/,
   );
 });
 
@@ -570,6 +570,127 @@ test('Second Chance cancels an uncommitted loss and replaces it with a new 4-opt
 
   assert.equal(committed.winnerId, 'R');
   assert.equal(game.state.territories.get(2).ownerId, 'R');
+});
+
+test('defender can use Second Chance during attacker turn even after attacker used a boost', () => {
+  const owners = allOwnedBy('B');
+  owners[1] = 'R';
+
+  const game = createWarGame({ owners });
+  game.boostSystem.grantToPlayer(game.state, 'R', BOOST_TYPES.SECRET_ROUTE);
+  game.boostSystem.grantToPlayer(game.state, 'B', BOOST_TYPES.SECOND_CHANCE);
+  game.boostSystem.grantToPlayer(game.state, 'B', BOOST_TYPES.SECOND_CHANCE);
+
+  game.boostSystem.prepareAttackBoost({
+    state: game.state,
+    playerId: 'R',
+    boostType: BOOST_TYPES.SECRET_ROUTE,
+  });
+
+  game.combatSystem.beginTerritoryAttack({
+    state: game.state,
+    attackerId: 'R',
+    targetTerritoryId: 36,
+  });
+
+  const first = game.combatSystem.previewActiveQuestionOutcome({
+    state: game.state,
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+  assert.equal(first.loserId, 'B');
+
+  const replay = game.boostSystem.useBoost({
+    state: game.state,
+    playerId: 'B',
+    boostType: BOOST_TYPES.SECOND_CHANCE,
+  });
+
+  assert.equal(replay.replayQuestion, true);
+  assert.equal(game.state.warState.boostUsedByPlayer.R, BOOST_TYPES.SECRET_ROUTE);
+  assert.equal(game.state.warState.boostUsedByPlayer.B, BOOST_TYPES.SECOND_CHANCE);
+
+  game.combatSystem.previewActiveQuestionOutcome({
+    state: game.state,
+    attackerCorrect: true,
+    defenderCorrect: false,
+  });
+
+  assert.throws(
+    () => game.boostSystem.useBoost({
+      state: game.state,
+      playerId: 'B',
+      boostType: BOOST_TYPES.SECOND_CHANCE,
+    }),
+    /Only one boost per player/,
+  );
+});
+
+test('per-player boost limits reset when the game advances to the next turn', () => {
+  const game = createWarGame();
+  game.boostSystem.grantToPlayer(game.state, 'R', BOOST_TYPES.SMALL_CHEST);
+
+  game.boostSystem.useBoost({
+    state: game.state,
+    playerId: 'R',
+    boostType: BOOST_TYPES.SMALL_CHEST,
+  });
+
+  assert.equal(
+    game.state.warState.boostUsedByPlayer.R,
+    BOOST_TYPES.SMALL_CHEST,
+  );
+
+  game.turnSystem.advance(game.state);
+
+  assert.deepEqual(game.state.warState.boostUsedByPlayer, {
+    R: null,
+    B: null,
+    G: null,
+    P: null,
+  });
+});
+
+test('Fort Restoration cannot be spent on an intact Fort', () => {
+  const game = createWarGame();
+  game.boostSystem.grantToPlayer(
+    game.state,
+    'R',
+    BOOST_TYPES.FORT_RESTORATION,
+  );
+
+  assert.throws(
+    () => game.boostSystem.useBoost({
+      state: game.state,
+      playerId: 'R',
+      boostType: BOOST_TYPES.FORT_RESTORATION,
+    }),
+    /Fort is intact/,
+  );
+
+  assert.equal(
+    game.boostSystem.getInventoryCount(
+      game.state,
+      'R',
+      BOOST_TYPES.FORT_RESTORATION,
+    ),
+    1,
+  );
+  assert.equal(game.state.warState.boostUsedByPlayer.R, null);
+
+  game.state.bases.get('A').destroyCurrentLayer();
+
+  const restored = game.boostSystem.useBoost({
+    state: game.state,
+    playerId: 'R',
+    boostType: BOOST_TYPES.FORT_RESTORATION,
+  });
+
+  assert.equal(restored.fortStatus, 'ACTIVE');
+  assert.equal(
+    game.state.warState.boostUsedByPlayer.R,
+    BOOST_TYPES.FORT_RESTORATION,
+  );
 });
 
 test('successful island capture gives 10 dubloons; successful defense gives 2 Fame', () => {
