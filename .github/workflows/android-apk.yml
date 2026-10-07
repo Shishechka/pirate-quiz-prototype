@@ -1,9 +1,9 @@
-name: Build Pirates v1.1
+name: Build Pirates no-flagship lab
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, no-flagship-lab ]
 
 jobs:
   build:
@@ -31,7 +31,7 @@ jobs:
           base64 -d ci/pirates-v1.keystore.b64 > ci/pirates-v1.keystore
           keytool -list -keystore ci/pirates-v1.keystore -storepass piratesv1 -alias piratesdebug >/dev/null
 
-      - name: Pirates v1.1 source sanity
+      - name: Pirates no-flagship source sanity
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -39,6 +39,7 @@ jobs:
           ui=Path("app/src/main/assets/ui_patch.js").read_text()
           index=Path("app/src/main/assets/index.html").read_text()
           visual=Path("app/src/main/assets/v1_1_visual_patch.js").read_text()
+          noflag=Path("app/src/main/assets/no_flagship_mode.js").read_text()
           assert "for(let i=1;i<=36;i++)" in game
           assert "Array.from({length:8}" in ui
           assert "for(var r=0;r<8;r++)" in ui
@@ -47,11 +48,12 @@ jobs:
           assert "totalMarks===32" in visual
           assert "contentBounds()" in ui and "usableRect()" in ui
           assert "v1_1_visual_patch.js" in index
-          assert "v1_visual_patch.js" not in index
-          assert ".mapControls{display:none" in visual
-          assert "#homeBtn{display:none" in visual
+          assert "no_flagship_mode.js" in index
+          assert "balance_test_patch.js" not in index
+          assert "phase:'CLAIM'" in noflag
+          assert "Ship gameplay disabled" in noflag
           assert "MAP_SVG" in visual and "ARTS={" in visual
-          print("Pirates v1.1 source sanity: OK")
+          print("Pirates no-flagship source sanity: OK")
           PY
 
       - uses: gradle/actions/setup-gradle@v4
@@ -70,9 +72,9 @@ jobs:
           echo "$BADGING" | grep "package: name='com.piratequiz.prototype'"
           echo "$BADGING" | grep "versionCode='2'"
           echo "$BADGING" | grep "versionName='1.1.0'"
-          cp "$APK" "Pirates-v1.1.apk"
+          cp "$APK" "Pirates-no-flagship-lab.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Pirates-v1.1
-          path: Pirates-v1.1.apk
+          name: Pirates-no-flagship-lab
+          path: Pirates-no-flagship-lab.apk
