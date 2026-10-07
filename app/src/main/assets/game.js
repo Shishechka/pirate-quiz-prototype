@@ -1,6 +1,6 @@
 'use strict';
 const PLAYERS=['R','B','G','P']; const BASE={R:'A',B:'B',G:'C',P:'D'}; const OWNER_BASE={A:'R',B:'B',C:'G',D:'P'};
-const COLORS={R:'#ef5a50',B:'#4c91ff',G:'#43c279',P:'#b46cff'}; const L2=new Set([3,8,9,11,17,18,19,20,26,28,33,34]); const L3=new Set([10,14,15,16,21,22,23,27]);
+const COLORS={R:'#ef5a50',B:'#4c91ff',G:'#43c279',P:'#b46cff'}; const L2=new Set([3,4,8,9,11,17,20,26,28,33]); const L3=new Set([10,14,15,16,21,22,23,27]);
 const lv=i=>L3.has(i)?3:L2.has(i)?2:1; const adj={}; for(let i=1;i<=36;i++)adj[i]=[]; for(const b of ['A','B','C','D'])adj[b]=[]; const link=(a,b)=>{adj[a].push(b);adj[b].push(a)};
 for(let r=0;r<6;r++)for(let c=0;c<6;c++){let i=r*6+c+1;if(c<5)link(i,i+1);if(r<5)link(i,i+6)} link(15,22);link(16,21); for(const [b,ids] of Object.entries({A:[1,2,7],B:[5,6,12],C:[25,31,32],D:[30,35,36]}))for(const i of ids)link(b,i);
 const mcq=[
