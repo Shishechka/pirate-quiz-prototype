@@ -39,9 +39,13 @@ jobs:
           game=Path("app/src/main/assets/no_flagship_game.js").read_text()
           ui=Path("app/src/main/assets/no_flagship_ui.js").read_text()
           art=Path("app/src/main/assets/no_flagship_art.js").read_text()
+          p1=Path("app/src/main/assets/game_map_part1.js").read_text()
+          p2=Path("app/src/main/assets/game_map_part2.js").read_text()
+          p3=Path("app/src/main/assets/game_map_part3.js").read_text()
           assert 'src="game.js"' not in index
           assert 'src="ui_patch.js"' not in index
           assert 'src="no_flagship_game.js"' in index
+          assert 'src="game_map_part1.js"' in index and 'src="game_map_part2.js"' in index and 'src="game_map_part3.js"' in index
           assert 'src="no_flagship_art.js"' in index
           assert 'src="v1_1_visual_patch.js"' not in index
           assert 'src="no_flagship_ui.js"' in index
@@ -64,11 +68,11 @@ jobs:
           assert '.actionBtn{display:none!important}' in index
           assert "Math.max(u.width/1600,u.height/900)*.96" in ui
           assert Path("docs/no-flagship-ui-spec.md").exists()
-          assert "MAP_SVG" in art
-          assert "ISLAND_L1" in art and "ISLAND_L2" in art and "ISLAND_L3" in art
-          assert "const BASE=" in art
-          assert "data:image/webp;base64" not in art
-          assert ".tile.claimable:before" in art
+          assert "Approved generated map composition" in art
+          assert "data:image/webp;base64," in art
+          assert "#routeSvg{display:none" in art
+          assert ".tile:before,.tile:after,.base:before,.base:after" in art
+          assert "window.__PIRATE_MAP_B64" in p1 and "window.__PIRATE_MAP_B64" in p2 and "window.__PIRATE_MAP_B64" in p3
           assert "fitPirateMap" in ui
           assert "A:{x:185,y:145}" in ui and "C:{x:185,y:755}" in ui
           print("No-flagship clean runtime sanity: OK")
