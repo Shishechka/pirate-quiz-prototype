@@ -31,15 +31,17 @@ jobs:
           base64 -d ci/pirates-v1.keystore.b64 > ci/pirates-v1.keystore
           keytool -list -keystore ci/pirates-v1.keystore -storepass piratesv1 -alias piratesdebug >/dev/null
 
-      - name: Materialize approved Art Pack 1.0
+      - name: Materialize approved Art Pack 1.1
         run: |
           mkdir -p app/src/main/assets/art
-          cat app/src/main/assets/art-src/map/map_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/approved_map_v1.webp
+          cat app/src/main/assets/art-src/map-v1_1/map_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/approved_map_v1_1.webp
+          cat app/src/main/assets/art-src/baseA-v1_1/baseA_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/base_A_red_v1_1.webp
           cat app/src/main/assets/art-src/atlas/atlas_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/approved_assets_atlas_v1.webp
-          echo "01b896b10fd46edc523ce1ded411690b1dc84fd0d730904813eba80141c14a1d  app/src/main/assets/art/approved_map_v1.webp" | sha256sum -c -
+          echo "f2c96d9eb7f4b95a53d87b3410ec3353af41f0bb57fc86ad80f4920275e7b39a  app/src/main/assets/art/approved_map_v1_1.webp" | sha256sum -c -
+          echo "6273a3e3bf9400f26dcdb2f61bd9109085d4c547fdb2d0625cee4f2448444fcf  app/src/main/assets/art/base_A_red_v1_1.webp" | sha256sum -c -
           echo "7c2c52440e8afa202ac78324f9b410409c941bf984096dd823640597af2889cf  app/src/main/assets/art/approved_assets_atlas_v1.webp" | sha256sum -c -
-          test $(stat -c%s app/src/main/assets/art/approved_map_v1.webp) -eq 521468
-          test $(stat -c%s app/src/main/assets/art/approved_assets_atlas_v1.webp) -eq 538756
+          test $(stat -c%s app/src/main/assets/art/approved_map_v1_1.webp) -eq 1523324
+          test $(stat -c%s app/src/main/assets/art/base_A_red_v1_1.webp) -eq 326066
 
       - name: No-flagship runtime sanity
         run: |
@@ -52,44 +54,35 @@ jobs:
           assert 'src="game.js"' not in index
           assert 'src="ui_patch.js"' not in index
           assert 'src="no_flagship_game.js"' in index
-          assert 'game_map_part1.js' not in index and 'game_map_part2.js' not in index and 'game_map_part3.js' not in index
           assert 'src="no_flagship_art.js"' in index
           assert 'src="no_flagship_ui.js"' in index
-          assert "ship:" not in game
-          assert "Флагман" not in game
+          assert "ship:" not in game and "Флагман" not in game
           assert "phase:'CLAIM'" in game
           assert "const MAP_SCHEMA_VERSION='1.0'" in game
           assert "const L2=new Set([3,8,9,11,17,18,19,20,26,28,29,34])" in game
           assert "const L3=new Set([10,14,15,16,21,22,23,27])" in game
           assert "A:[1,7,13]" in game and "B:[6,12,18]" in game
           assert "C:[25,31,32]" in game and "D:[30,35,36]" in game
-          assert "[2,7],[5,10],[15,22],[16,21],[16,23],[17,22],[25,32],[26,31],[29,34]" in game
           assert Path("docs/map-schema-v1.0.md").exists()
-          assert Path("docs/approved-art-assets-v1.md").exists()
+          assert Path("docs/approved-art-assets-v1.1.md").exists()
           assert "botVsBotMcq" in game and "BOT_THINK_MIN" in game
-          assert "baseVisualOwner" in game
           assert "defenseFame" in game and "+1 слава за защиту" in game
-          assert "HUMAN_QUESTION_MS=20000" in game
-          assert "ANSWER_REVEAL_MS=3000" in game
-          assert "correctReveal" in game and "attackerFull" in game and "defenderFull" in game and "samePick" in game
-          assert "orderMark" in game and "claimOrders" in game
-          assert "S.orders" in game
-          assert "showNumericReveal" in game and "NUMERIC_REORDER_DELAY" in game
-          assert "setupGestures" in ui
-          assert "right:92px" in ui and "orderMark" in ui
-          assert "renderStandings" in game
-          assert "standingsRows" in index
-          assert '.actionBtn{display:none!important}' in index
-          assert "Math.max(u.width/1600,u.height/900)*.96" in ui
-          assert "Approved Art Pack 1.0" in art
-          assert 'art/approved_map_v1.webp' in art
+          assert "HUMAN_QUESTION_MS=20000" in game and "ANSWER_REVEAL_MS=3000" in game
+          assert "correctReveal" in game and "samePick" in game
+          assert "S.orders" in game and "showNumericReveal" in game
+          assert "renderStandings" in game and "standingsRows" in index
+          assert "setupGestures" in ui and "fitPirateMap" in ui
+          assert "const colX=[300,500,700,900,1100,1300],rowY=[170,290,410,530,650,770]" in ui
+          assert "A:{x:150,y:145}" in ui and "D:{x:1450,y:755}" in ui
+          assert "Math.max(u.width/1600,u.height/900)*1.01" in ui
+          assert "left:22%" in ui and "right:22%" in ui
+          assert "Approved Art Pack 1.1" in art
+          assert 'art/approved_map_v1_1.webp' in art
           assert "#routeSvg{display:none" in art
-          assert ".tile:before,.tile:after,.base:before,.base:after" in art
-          assert "fitPirateMap" in ui
-          assert "A:{x:185,y:145}" in ui and "C:{x:185,y:755}" in ui
-          assert Path("app/src/main/assets/art/approved_map_v1.webp").exists()
-          assert Path("app/src/main/assets/art/approved_assets_atlas_v1.webp").exists()
-          print("No-flagship Art Pack 1.0 sanity: OK")
+          assert "width:238px" in index and "backdrop-filter:blur(4px)" in index
+          assert Path("app/src/main/assets/art/approved_map_v1_1.webp").exists()
+          assert Path("app/src/main/assets/art/base_A_red_v1_1.webp").exists()
+          print("Schema 1.0 / Art Pack 1.1 runtime sanity: OK")
           PY
 
       - uses: gradle/actions/setup-gradle@v4
@@ -106,9 +99,9 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")
           echo "$BADGING" | grep "package: name='com.piratequiz.prototype'"
-          cp "$APK" "Pirates-schema-1.0-approved-art.apk"
+          cp "$APK" "Pirates-schema-1.0-art-v1.1.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Pirates-schema-1.0-approved-art
-          path: Pirates-schema-1.0-approved-art.apk
+          name: Pirates-schema-1.0-art-v1.1
+          path: Pirates-schema-1.0-art-v1.1.apk

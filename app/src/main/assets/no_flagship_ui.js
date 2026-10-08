@@ -4,15 +4,14 @@
   const API=window.PiratesNoFlagship;
   if(!API)throw new Error('Pirates no-flagship engine is not loaded');
 
-  const BASE_POS={A:{x:185,y:145},B:{x:1415,y:145},C:{x:185,y:755},D:{x:1415,y:755}};
-  const colX=[345,525,705,895,1075,1255],rowY=[175,280,385,500,615,720];
-  const jitterX=[0,-18,12,22,-14,10,16,8,-24,20,-8,18,-10,22,-20,12,20,-18,8,-12,16,-16,24,-10,20,-18,10,18,-22,8,-6,20,-16,14,-18,10];
-  const jitterY=[0,10,-8,7,-11,8,-9,11,4,-12,10,-5,8,-7,13,-10,6,0,-8,10,-11,6,11,-4,7,-10,9,-5,12,-8,-5,10,-9,6,-10,8];
+  // Approved wide grid layout v1.1. Schema 1.0 topology is unchanged.
+  const BASE_POS={A:{x:150,y:145},B:{x:1450,y:145},C:{x:150,y:755},D:{x:1450,y:755}};
+  const colX=[300,500,700,900,1100,1300],rowY=[170,290,410,530,650,770];
 
   function pos(node){
     if(typeof node==='string')return BASE_POS[node];
     const idx=node-1,r=Math.floor(idx/6),c=idx%6;
-    return{x:colX[c]+jitterX[idx],y:rowY[r]+jitterY[idx]};
+    return{x:colX[c],y:rowY[r]};
   }
 
   const style=document.createElement('style');
@@ -23,15 +22,15 @@
     '.base .baseMeta{border-color:var(--baseColor)!important}',
     '.route.hot{stroke:#f2cb72!important;opacity:.95!important;filter:drop-shadow(0 0 3px #d69b50)!important}',
     '.rightRail .boostBtn{position:relative!important}',
-    '.turnBoard{position:absolute!important;z-index:32!important;left:154px!important;right:92px!important;bottom:max(9px,env(safe-area-inset-bottom))!important;width:auto!important;min-width:0!important;max-width:none!important;height:18px!important;padding:0!important;margin:0!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:none!important;overflow:visible!important}',
+    '.turnBoard{position:absolute!important;z-index:32!important;left:22%!important;right:22%!important;bottom:max(8px,env(safe-area-inset-bottom))!important;width:auto!important;min-width:0!important;max-width:none!important;height:24px!important;padding:3px 10px!important;margin:0!important;background:rgba(225,194,137,.24)!important;border:1px solid rgba(255,235,192,.22)!important;border-radius:12px!important;box-shadow:0 2px 8px rgba(36,18,8,.25)!important;backdrop-filter:blur(2px)!important;-webkit-backdrop-filter:blur(2px)!important;pointer-events:none!important;overflow:visible!important}',
     '.turnCaption{display:none!important}',
-    '.timeline{display:flex!important;flex-direction:row!important;gap:11px!important;align-items:center!important;justify-content:center!important;width:100%!important;height:18px!important}',
+    '.timeline{display:flex!important;flex-direction:row!important;gap:7px!important;align-items:center!important;justify-content:center!important;width:100%!important;height:16px!important}',
     '.orderGroup{display:flex;flex-direction:row;gap:3px;align-items:center;opacity:.50;flex:0 0 auto}',
     '.orderGroup.doneRound{opacity:.20}.orderGroup.currentRound{opacity:1}.orderGroup.futureRound{opacity:.42}',
     '.orderMark{display:block;width:13px;height:5px;border-radius:2px;background:var(--order-color);box-shadow:0 1px 2px rgba(31,15,6,.7);flex:0 0 auto}',
     '.orderMark.done{opacity:.25}.orderMark.current{height:7px;outline:2px solid #fff4c9;outline-offset:1px;box-shadow:0 0 7px #fff4c9}',
-    '@media(max-width:1100px){.turnBoard{left:136px!important;right:82px!important}.timeline{gap:7px!important}.orderGroup{gap:2px!important}.orderMark{width:11px!important;height:4px!important}}',
-    '@media(max-height:620px){.turnBoard{left:132px!important;right:78px!important;bottom:7px!important}.timeline{gap:7px!important}.orderMark{width:11px!important;height:4px!important}.orderMark.current{height:6px!important}}'
+    '@media(max-width:1100px){.turnBoard{left:15%!important;right:15%!important;padding:2px 7px!important}.timeline{gap:5px!important}.orderGroup{gap:2px!important}.orderMark{width:10px!important;height:4px!important}}',
+    '@media(max-height:620px){.turnBoard{left:16%!important;right:16%!important;bottom:6px!important;height:21px!important;padding:2px 7px!important}.timeline{gap:5px!important;height:15px!important}.orderMark{width:10px!important;height:4px!important}.orderMark.current{height:6px!important}}'
   ].join('');
   document.head.appendChild(style);
 
@@ -73,7 +72,7 @@
     });
   }
 
-  const view={baseScale:1,zoom:1,tx:0,ty:0,minZoom:1,maxZoom:2.6,pointers:new Map(),moved:false,blockClick:false};
+  const view={baseScale:1,zoom:1,tx:0,ty:0,minZoom:.94,maxZoom:2.6,pointers:new Map(),moved:false,blockClick:false};
   function usableRect(){
     const vp=document.getElementById('mapViewport');
     return{left:0,top:0,right:vp.clientWidth,bottom:vp.clientHeight,width:vp.clientWidth,height:vp.clientHeight};
@@ -95,7 +94,7 @@
     const vp=document.getElementById('mapViewport');
     if(!vp||!vp.clientWidth||!vp.clientHeight)return;
     const u=usableRect();
-    view.baseScale=Math.max(u.width/1600,u.height/900)*.96;
+    view.baseScale=Math.max(u.width/1600,u.height/900)*1.01;
     view.zoom=1;
     view.tx=(u.width-1600*view.baseScale)/2;
     view.ty=(u.height-900*view.baseScale)/2;
