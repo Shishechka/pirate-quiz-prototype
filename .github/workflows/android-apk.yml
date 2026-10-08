@@ -31,6 +31,16 @@ jobs:
           base64 -d ci/pirates-v1.keystore.b64 > ci/pirates-v1.keystore
           keytool -list -keystore ci/pirates-v1.keystore -storepass piratesv1 -alias piratesdebug >/dev/null
 
+      - name: Materialize approved Art Pack 1.0
+        run: |
+          mkdir -p app/src/main/assets/art
+          cat app/src/main/assets/art-src/map/map_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/approved_map_v1.webp
+          cat app/src/main/assets/art-src/atlas/atlas_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/approved_assets_atlas_v1.webp
+          echo "01b896b10fd46edc523ce1ded411690b1dc84fd0d730904813eba80141c14a1d  app/src/main/assets/art/approved_map_v1.webp" | sha256sum -c -
+          echo "7c2c52440e8afa202ac78324f9b410409c941bf984096dd823640597af2889cf  app/src/main/assets/art/approved_assets_atlas_v1.webp" | sha256sum -c -
+          test $(stat -c%s app/src/main/assets/art/approved_map_v1.webp) -eq 521468
+          test $(stat -c%s app/src/main/assets/art/approved_assets_atlas_v1.webp) -eq 538756
+
       - name: No-flagship runtime sanity
         run: |
           python3 - <<'PY'
@@ -39,15 +49,11 @@ jobs:
           game=Path("app/src/main/assets/no_flagship_game.js").read_text()
           ui=Path("app/src/main/assets/no_flagship_ui.js").read_text()
           art=Path("app/src/main/assets/no_flagship_art.js").read_text()
-          p1=Path("app/src/main/assets/game_map_part1.js").read_text()
-          p2=Path("app/src/main/assets/game_map_part2.js").read_text()
-          p3=Path("app/src/main/assets/game_map_part3.js").read_text()
           assert 'src="game.js"' not in index
           assert 'src="ui_patch.js"' not in index
           assert 'src="no_flagship_game.js"' in index
-          assert 'src="game_map_part1.js"' in index and 'src="game_map_part2.js"' in index and 'src="game_map_part3.js"' in index
+          assert 'game_map_part1.js' not in index and 'game_map_part2.js' not in index and 'game_map_part3.js' not in index
           assert 'src="no_flagship_art.js"' in index
-          assert 'src="v1_1_visual_patch.js"' not in index
           assert 'src="no_flagship_ui.js"' in index
           assert "ship:" not in game
           assert "Флагман" not in game
@@ -59,6 +65,7 @@ jobs:
           assert "C:[25,31,32]" in game and "D:[30,35,36]" in game
           assert "[2,7],[5,10],[15,22],[16,21],[16,23],[17,22],[25,32],[26,31],[29,34]" in game
           assert Path("docs/map-schema-v1.0.md").exists()
+          assert Path("docs/approved-art-assets-v1.md").exists()
           assert "botVsBotMcq" in game and "BOT_THINK_MIN" in game
           assert "baseVisualOwner" in game
           assert "defenseFame" in game and "+1 слава за защиту" in game
@@ -74,15 +81,15 @@ jobs:
           assert "standingsRows" in index
           assert '.actionBtn{display:none!important}' in index
           assert "Math.max(u.width/1600,u.height/900)*.96" in ui
-          assert Path("docs/no-flagship-ui-spec.md").exists()
-          assert "Approved generated map composition" in art
-          assert "data:image/webp;base64," in art
+          assert "Approved Art Pack 1.0" in art
+          assert 'art/approved_map_v1.webp' in art
           assert "#routeSvg{display:none" in art
           assert ".tile:before,.tile:after,.base:before,.base:after" in art
-          assert "window.__PIRATE_MAP_B64" in p1 and "window.__PIRATE_MAP_B64" in p2 and "window.__PIRATE_MAP_B64" in p3
           assert "fitPirateMap" in ui
           assert "A:{x:185,y:145}" in ui and "C:{x:185,y:755}" in ui
-          print("No-flagship clean runtime sanity: OK")
+          assert Path("app/src/main/assets/art/approved_map_v1.webp").exists()
+          assert Path("app/src/main/assets/art/approved_assets_atlas_v1.webp").exists()
+          print("No-flagship Art Pack 1.0 sanity: OK")
           PY
 
       - uses: gradle/actions/setup-gradle@v4
@@ -99,9 +106,9 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")
           echo "$BADGING" | grep "package: name='com.piratequiz.prototype'"
-          cp "$APK" "Pirates-no-flagship-refactor.apk"
+          cp "$APK" "Pirates-schema-1.0-approved-art.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Pirates-no-flagship-refactor
-          path: Pirates-no-flagship-refactor.apk
+          name: Pirates-schema-1.0-approved-art
+          path: Pirates-schema-1.0-approved-art.apk
