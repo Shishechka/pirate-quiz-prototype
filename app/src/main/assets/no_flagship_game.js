@@ -305,19 +305,28 @@ function botChoiceIndex(q){
 }
 function revealMcq(q,attackerChoice,defenderChoice,defender){
   const buttons=[...$('answers').children];
+  const sameChoice=attackerChoice!=null&&defenderChoice!=null&&attackerChoice===defenderChoice;
   buttons.forEach((b,i)=>{
     b.disabled=true;
-    b.classList.remove('attackerPick','defenderPick','correctReveal');
+    b.classList.remove('attackerFull','defenderFull','samePick','correctReveal');
     b.style.removeProperty('--attacker-color');
     b.style.removeProperty('--defender-color');
-    if(i===attackerChoice){
-      b.classList.add('attackerPick');
+
+    if(sameChoice&&i===attackerChoice){
+      b.classList.add('samePick');
       b.style.setProperty('--attacker-color',COLORS[pending.attacker]);
-    }
-    if(i===defenderChoice){
-      b.classList.add('defenderPick');
       b.style.setProperty('--defender-color',COLORS[defender]);
+    }else{
+      if(i===attackerChoice){
+        b.classList.add('attackerFull');
+        b.style.setProperty('--attacker-color',COLORS[pending.attacker]);
+      }
+      if(i===defenderChoice){
+        b.classList.add('defenderFull');
+        b.style.setProperty('--defender-color',COLORS[defender]);
+      }
     }
+
     if(i===q[2])b.classList.add('correctReveal');
   });
 }

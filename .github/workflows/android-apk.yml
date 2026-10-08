@@ -52,7 +52,7 @@ jobs:
           assert "baseVisualOwner" in game
           assert "HUMAN_QUESTION_MS=20000" in game
           assert "ANSWER_REVEAL_MS=3000" in game
-          assert "correctReveal" in game and "attackerPick" in game and "defenderPick" in game
+          assert "correctReveal" in game and "attackerFull" in game and "defenderFull" in game and "samePick" in game
           assert "orderMark" in game and "claimOrders" in game
           assert "S.orders" in game
           assert "showNumericReveal" in game and "NUMERIC_REORDER_DELAY" in game
