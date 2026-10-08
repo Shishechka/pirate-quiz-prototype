@@ -67,12 +67,12 @@ const NUMERIC_RANKED_HOLD=2400;
 
 function randomMs(min,max){return min+Math.floor(Math.random()*(max-min+1));}
 function log(t){const el=$('log');if(!el)return;const d=document.createElement('div');d.textContent=t;el.prepend(d);}
-function playerState(){return{coins:20,flags:0,secret:1};}
+function playerState(){return{coins:20,flags:0,secret:1,defenseFame:0};}
 function baseVisualOwner(b){return S&&S.captured[b]?S.captured[b]:OWNER_BASE[b];}
 
 function fame(p){
   if(!S)return 0;
-  let v=S.players[p].flags*9;
+  let v=S.players[p].flags*9+(S.players[p].defenseFame||0);
   for(let i=1;i<=36;i++)if(S.owners[i]===p)v+=lv(i);
   return v;
 }
@@ -531,7 +531,10 @@ function applyDuel(winner){
   const attacker=pending.attacker;
 
   if(winner==='DEFENDER'){
-    log(NAMES[defenderFor(target)]+' отбивают атаку на '+targetLabel(target)+'.');
+    const defender=defenderFor(target);
+    S.players[defender].defenseFame=(S.players[defender].defenseFame||0)+1;
+    log(NAMES[defender]+' отбивают атаку на '+targetLabel(target)+' · +1 слава за защиту.');
+    render();
     return finishBattle();
   }
 
