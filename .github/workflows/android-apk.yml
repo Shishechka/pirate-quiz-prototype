@@ -63,9 +63,11 @@ jobs:
           assert '.actionBtn{display:none!important}' in index
           assert "Math.max(u.width/1600,u.height/900)*.96" in ui
           assert Path("docs/no-flagship-ui-spec.md").exists()
-          assert "ISLAND_SPRITE" in art and "data:image/webp;base64" in art
-          assert "background-position:33.333% 0" in art
+          assert "ARTS={" in art
+          assert "data:image/webp;base64" in art
+          assert "--pirates-map" in art
           assert "fitPirateMap" in ui
+          assert "A:{x:185,y:145}" in ui and "C:{x:185,y:755}" in ui
           print("No-flagship clean runtime sanity: OK")
           PY
 
