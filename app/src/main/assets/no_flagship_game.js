@@ -5,17 +5,27 @@ const BASE={R:'A',B:'B',G:'C',P:'D'};
 const OWNER_BASE={A:'R',B:'B',C:'G',D:'P'};
 const COLORS={R:'#ef5a50',B:'#4c91ff',G:'#43c279',P:'#b46cff'};
 const NAMES={R:'Красные',B:'Синие',G:'Зелёные',P:'Фиолетовые'};
-const L2=new Set([3,4,8,9,11,17,20,26,28,33]);
+const MAP_SCHEMA_VERSION='1.0';
+const L2=new Set([3,8,9,11,17,18,19,20,26,28,29,34]);
 const L3=new Set([10,14,15,16,21,22,23,27]);
 const lv=i=>L3.has(i)?3:L2.has(i)?2:1;
 
+// Canonical map schema 1.0. Do not change levels or graph ad hoc.
+// Source of truth: docs/map-schema-v1.0.md
 const adj={};
 for(let i=1;i<=36;i++)adj[i]=[];
 for(const b of ['A','B','C','D'])adj[b]=[];
-const link=(a,b)=>{adj[a].push(b);adj[b].push(a);};
-for(let r=0;r<6;r++)for(let c=0;c<6;c++){const i=r*6+c+1;if(c<5)link(i,i+1);if(r<5)link(i,i+6);}
-link(15,22);link(16,21);
-for(const [b,ids] of Object.entries({A:[1,2,7],B:[5,6,12],C:[25,31,32],D:[30,35,36]}))for(const i of ids)link(b,i);
+const link=(a,b)=>{
+  if(!adj[a].includes(b))adj[a].push(b);
+  if(!adj[b].includes(a))adj[b].push(a);
+};
+for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+  const i=r*6+c+1;
+  if(c<5)link(i,i+1);
+  if(r<5)link(i,i+6);
+}
+for(const [a,b] of [[2,7],[5,10],[15,22],[16,21],[16,23],[17,22],[25,32],[26,31],[29,34]])link(a,b);
+for(const [b,ids] of Object.entries({A:[1,7,13],B:[6,12,18],C:[25,31,32],D:[30,35,36]}))for(const i of ids)link(b,i);
 
 const MCQ=[
  ['Какая планета ближе всего к Солнцу?',['Венера','Земля','Меркурий','Марс'],2],
@@ -748,4 +758,4 @@ $('nSend').onclick=humanNumericSubmit;
 $('nInput').addEventListener('keydown',e=>{if(e.key==='Enter')humanNumericSubmit();});
 $('newBtn').onclick=newGame;
 
-window.PiratesNoFlagship={newGame,render,adj,COLORS,NAMES,BASE,OWNER_BASE,lv};
+window.PiratesNoFlagship={newGame,render,adj,COLORS,NAMES,BASE,OWNER_BASE,lv,MAP_SCHEMA_VERSION};
