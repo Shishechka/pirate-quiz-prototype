@@ -64,9 +64,11 @@ jobs:
           assert '.actionBtn{display:none!important}' in index
           assert "Math.max(u.width/1600,u.height/900)*.96" in ui
           assert Path("docs/no-flagship-ui-spec.md").exists()
-          assert "ARTS={" in art
-          assert "data:image/webp;base64" in art
-          assert "--pirates-map" in art
+          assert "MAP_SVG" in art
+          assert "ISLAND_L1" in art and "ISLAND_L2" in art and "ISLAND_L3" in art
+          assert "const BASE=" in art
+          assert "data:image/webp;base64" not in art
+          assert ".tile.claimable:before" in art
           assert "fitPirateMap" in ui
           assert "A:{x:185,y:145}" in ui and "C:{x:185,y:755}" in ui
           print("No-flagship clean runtime sanity: OK")

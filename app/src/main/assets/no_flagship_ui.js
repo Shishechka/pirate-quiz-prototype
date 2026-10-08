@@ -18,9 +18,8 @@
   const style=document.createElement('style');
   style.textContent=[
     '.mapControls,.shipPanel,.ship{display:none!important}',
-    '.tile.neutral .islandArt{opacity:.48!important;filter:saturate(.35) sepia(.18) contrast(.9)!important}',
-    '.tile.claimable{outline:3px solid rgba(246,211,119,.96)!important;outline-offset:5px!important;border-radius:18px!important}',
-    '.tile.claimable .islandArt{opacity:1!important;filter:saturate(.86) contrast(.98) drop-shadow(0 0 4px rgba(255,235,172,.72))!important}',
+    '.tile.neutral{opacity:1!important}',
+    '.tile.claimable{outline:none!important}',
     '.base .baseMeta{border-color:var(--baseColor)!important}',
     '.route.hot{stroke:#f2cb72!important;opacity:.95!important;filter:drop-shadow(0 0 3px #d69b50)!important}',
     '.rightRail .boostBtn{position:relative!important}',
