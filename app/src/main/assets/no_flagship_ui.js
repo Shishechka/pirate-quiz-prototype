@@ -25,7 +25,13 @@
     '.turnBoard{position:static!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;width:auto!important;min-width:0!important;max-width:none!important;height:auto!important}',
     '.timeline{display:flex!important;flex-direction:column!important;gap:6px!important;align-items:stretch!important;justify-content:flex-start!important}',
     '.turnCaption{display:block!important}',
-    '.rightRail .boostBtn{position:relative!important}'
+    '.rightRail .boostBtn{position:relative!important}',
+    'body[data-phase="CLAIM"] .turnBoard{position:absolute!important;right:222px!important;top:82px!important;width:auto!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;pointer-events:none!important}',
+    'body[data-phase="CLAIM"] .turnCaption{display:none!important}',
+    'body[data-phase="CLAIM"] .timeline{display:flex!important;flex-direction:row!important;gap:5px!important;align-items:center!important;width:auto!important}',
+    '.claimOrderMark{display:block;width:24px;height:8px;border-radius:3px;background:var(--claim-color);box-shadow:0 1px 3px rgba(31,15,6,.7);opacity:.88}',
+    '.claimOrderMark.done{opacity:.28}.claimOrderMark.current{height:10px;opacity:1;outline:2px solid #fff0b7;box-shadow:0 0 7px #fff0b7}',
+    '@media(max-height:620px){body[data-phase="CLAIM"] .turnBoard{right:194px!important;top:70px!important}.claimOrderMark{width:20px;height:7px}}'
   ].join('');
   document.head.appendChild(style);
 
@@ -67,19 +73,100 @@
     });
   }
 
+  const view={baseScale:1,zoom:1,tx:0,ty:0,minZoom:1,maxZoom:2.6,pointers:new Map(),moved:false,blockClick:false};
+  function usableRect(){
+    const vp=document.getElementById('mapViewport');
+    const left=18,top=68,right=Math.max(left+600,vp.clientWidth-224),bottom=Math.max(top+360,vp.clientHeight-18);
+    return{left,top,right,bottom,width:right-left,height:bottom-top};
+  }
+  function currentScale(){return view.baseScale*view.zoom;}
+  function clampView(){
+    const u=usableRect(),scale=currentScale(),cw=1600*scale,ch=900*scale;
+    if(cw<=u.width)view.tx=u.left+(u.width-cw)/2;
+    else view.tx=Math.min(u.left,Math.max(u.right-cw,view.tx));
+    if(ch<=u.height)view.ty=u.top+(u.height-ch)/2;
+    else view.ty=Math.min(u.top,Math.max(u.bottom-ch,view.ty));
+  }
+  function applyView(){
+    clampView();
+    const scene=document.getElementById('mapScene');
+    scene.style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+currentScale()+')';
+  }
   window.fitPirateMap=function(){
     const vp=document.getElementById('mapViewport');
-    const scene=document.getElementById('mapScene');
-    if(!vp||!scene||!vp.clientWidth||!vp.clientHeight)return;
-    const left=18,top=68,right=Math.max(left+600,vp.clientWidth-224),bottom=Math.max(top+360,vp.clientHeight-18);
-    const width=right-left,height=bottom-top;
-    const scale=Math.min(width/1600,height/900)*.98;
-    const tx=left+(width-1600*scale)/2;
-    const ty=top+(height-900*scale)/2;
-    scene.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')';
+    if(!vp||!vp.clientWidth||!vp.clientHeight)return;
+    const u=usableRect();
+    view.baseScale=Math.min(u.width/1600,u.height/900)*.98;
+    view.zoom=1;
+    view.tx=u.left+(u.width-1600*view.baseScale)/2;
+    view.ty=u.top+(u.height-900*view.baseScale)/2;
+    applyView();
   };
+  function zoomAt(mult,clientX,clientY){
+    const vp=document.getElementById('mapViewport'),rect=vp.getBoundingClientRect();
+    const oldScale=currentScale(),lx=clientX-rect.left,ly=clientY-rect.top;
+    const sceneX=(lx-view.tx)/oldScale,sceneY=(ly-view.ty)/oldScale;
+    view.zoom=Math.min(view.maxZoom,Math.max(view.minZoom,view.zoom*mult));
+    const next=currentScale();
+    view.tx=lx-sceneX*next;
+    view.ty=ly-sceneY*next;
+    applyView();
+  }
+  function setupGestures(){
+    const vp=document.getElementById('mapViewport');
+    let startDist=0,startZoom=1,startMid=null,startTx=0,startTy=0;
+    vp.addEventListener('pointerdown',e=>{
+      vp.setPointerCapture(e.pointerId);
+      view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      view.moved=false;
+      if(view.pointers.size===1){startTx=view.tx;startTy=view.ty;}
+      if(view.pointers.size===2){
+        const pts=[...view.pointers.values()];
+        startDist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+        startZoom=view.zoom;
+        startMid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+        startTx=view.tx;startTy=view.ty;
+      }
+    });
+    vp.addEventListener('pointermove',e=>{
+      if(!view.pointers.has(e.pointerId))return;
+      const prev=view.pointers.get(e.pointerId);
+      view.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(Math.abs(e.clientX-prev.x)+Math.abs(e.clientY-prev.y)>3)view.moved=true;
+      if(view.pointers.size===1&&view.zoom>1){
+        view.tx+=e.clientX-prev.x;view.ty+=e.clientY-prev.y;applyView();
+      }else if(view.pointers.size===2&&startDist>0){
+        const pts=[...view.pointers.values()];
+        const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+        view.zoom=Math.min(view.maxZoom,Math.max(view.minZoom,startZoom*dist/startDist));
+        const rect=vp.getBoundingClientRect(),scaleBefore=view.baseScale*startZoom,scaleNow=currentScale();
+        const mid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+        const lx=startMid.x-rect.left,ly=startMid.y-rect.top;
+        const sceneX=(lx-startTx)/scaleBefore,sceneY=(ly-startTy)/scaleBefore;
+        view.tx=(mid.x-rect.left)-sceneX*scaleNow;
+        view.ty=(mid.y-rect.top)-sceneY*scaleNow;
+        applyView();
+      }
+    });
+    const finish=e=>{
+      if(view.pointers.has(e.pointerId))view.pointers.delete(e.pointerId);
+      if(view.moved){view.blockClick=true;setTimeout(()=>{view.blockClick=false;},120);}
+      if(view.pointers.size<2)startDist=0;
+    };
+    vp.addEventListener('pointerup',finish);
+    vp.addEventListener('pointercancel',finish);
+    vp.addEventListener('wheel',e=>{
+      e.preventDefault();
+      zoomAt(e.deltaY<0?1.12:.9,e.clientX,e.clientY);
+    },{passive:false});
+    vp.addEventListener('click',e=>{
+      if(!view.blockClick)return;
+      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();view.blockClick=false;
+    },true);
+  }
 
   window.addEventListener('resize',()=>setTimeout(window.fitPirateMap,50));
+  setupGestures();
   API.newGame();
   setTimeout(window.fitPirateMap,120);
 })();

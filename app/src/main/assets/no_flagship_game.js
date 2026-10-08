@@ -59,9 +59,9 @@ let questionFrame=0;
 let activeQuestion=null;
 
 const HUMAN_QUESTION_MS=20000;
-const BOT_THINK_MIN=1800;
-const BOT_THINK_MAX=3000;
-const BOT_RESULT_MS=850;
+const BOT_THINK_MIN=2500;
+const BOT_THINK_MAX=4500;
+const ANSWER_REVEAL_MS=3000;
 
 function randomMs(min,max){return min+Math.floor(Math.random()*(max-min+1));}
 function log(t){const el=$('log');if(!el)return;const d=document.createElement('div');d.textContent=t;el.prepend(d);}
@@ -290,6 +290,26 @@ function clearQuestionUi(){
   $('nInput').value='';
   $('battleResult').textContent='';
 }
+function wrongChoiceIndex(q){
+  const arr=[0,1,2,3].filter(i=>i!==q[2]);
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+function botChoiceIndex(q){
+  return Math.random()<.62?q[2]:wrongChoiceIndex(q);
+}
+function revealMcq(q,attackerChoice,defenderChoice,defender){
+  const buttons=[...$('answers').children];
+  buttons.forEach((b,i)=>{
+    b.disabled=true;
+    b.style.setProperty('--attacker-fill',i===attackerChoice?COLORS[pending.attacker]:'#3f2a1b');
+    b.style.setProperty('--defender-fill',i===defenderChoice?COLORS[defender]:'#3f2a1b');
+    b.classList.toggle('correctReveal',i===q[2]);
+  });
+}
+function choiceResultText(q,attackerChoice,defenderChoice,defender){
+  const aOk=attackerChoice===q[2],dOk=defenderChoice===q[2];
+  return NAMES[pending.attacker]+': '+(aOk?'верно':'ошибка')+' · '+NAMES[defender]+': '+(dOk?'верно':'ошибка');
+}
 function battleMetaHtml(att,def,target){
   return '<span class="playerBadge" style="--badge:'+COLORS[att]+'"><i></i>'+NAMES[att]+'</span>'+
     '<span class="attackArrow">⚔ →</span>'+
@@ -325,33 +345,36 @@ function askHumanMcq(def){
 function humanTimeout(def){
   if(!pending)return;
   stopQuestionTimer(false);
-  [...$('answers').children].forEach(b=>b.disabled=true);
-  $('battleResult').textContent='Время вышло.';
+  if(activeQuestion&&activeQuestion.type==='MCQ'){
+    const q=activeQuestion.q;
+    const botChoice=botChoiceIndex(q);
+    const attackerChoice=pending.attacker==='R'?null:botChoice;
+    const defenderChoice=def==='R'?null:botChoice;
+    revealMcq(q,attackerChoice,defenderChoice,def);
+  }
+  $('battleResult').textContent='Время вышло — человек проигрывает дуэль.';
   const winner=pending.attacker==='R'?'DEFENDER':'ATTACKER';
-  setTimeout(()=>{closeQuestion();applyDuel(winner);},650);
+  setTimeout(()=>{closeQuestion();applyDuel(winner);},ANSWER_REVEAL_MS);
 }
 function humanMcqAnswered(index){
   if(!pending||!activeQuestion||activeQuestion.type!=='MCQ')return;
   stopQuestionTimer(false);
   const {q,def}=activeQuestion;
-  [...$('answers').children].forEach((b,i)=>{
-    b.disabled=true;
-    if(i===q[2])b.classList.add('correct');
-    if(i===index&&i!==q[2])b.classList.add('wrong');
-  });
-  const humanCorrect=index===q[2];
-  const botCorrect=Math.random()<.62;
-  const attackerCorrect=pending.attacker==='R'?humanCorrect:botCorrect;
-  const defenderCorrect=def==='R'?humanCorrect:botCorrect;
+  const botChoice=botChoiceIndex(q);
+  const attackerChoice=pending.attacker==='R'?index:botChoice;
+  const defenderChoice=def==='R'?index:botChoice;
+  revealMcq(q,attackerChoice,defenderChoice,def);
+  const attackerCorrect=attackerChoice===q[2];
+  const defenderCorrect=defenderChoice===q[2];
 
   if(attackerCorrect&&defenderCorrect){
-    $('battleResult').textContent='Оба ответили верно — решающий числовой вопрос.';
-    setTimeout(()=>askHumanNumeric(def),650);
+    $('battleResult').textContent=choiceResultText(q,attackerChoice,defenderChoice,def)+' · будет числовой тай-брейк.';
+    setTimeout(()=>askHumanNumeric(def),ANSWER_REVEAL_MS);
     return;
   }
   const winner=attackerCorrect&&!defenderCorrect?'ATTACKER':'DEFENDER';
-  $('battleResult').textContent=winner==='ATTACKER'?'Атакующий выигрывает дуэль.':'Защитник выигрывает дуэль.';
-  setTimeout(()=>{closeQuestion();applyDuel(winner);},700);
+  $('battleResult').textContent=choiceResultText(q,attackerChoice,defenderChoice,def)+' · '+(winner==='ATTACKER'?'атакующий выигрывает':'защитник выигрывает')+'.';
+  setTimeout(()=>{closeQuestion();applyDuel(winner);},ANSWER_REVEAL_MS);
 }
 function askHumanNumeric(def){
   if(!pending)return;
@@ -377,7 +400,7 @@ function humanNumericSubmit(){
   const humanWins=Math.abs(v-ans)<=Math.abs(botGuess-ans);
   const winner=(pending.attacker==='R'?humanWins:!humanWins)?'ATTACKER':'DEFENDER';
   $('battleResult').textContent='Твой ответ: '+v+' · соперник: '+Math.round(botGuess*100)/100;
-  setTimeout(()=>{closeQuestion();applyDuel(winner);},850);
+  setTimeout(()=>{closeQuestion();applyDuel(winner);},ANSWER_REVEAL_MS);
 }
 
 async function botVsBotMcq(def){
@@ -396,23 +419,18 @@ async function botVsBotMcq(def){
   });
   $('battleResult').textContent=NAMES[pending.attacker]+' и '+NAMES[def]+' думают…';
   const think=randomMs(BOT_THINK_MIN,BOT_THINK_MAX);
-  animateTimer(think,()=>{});
+  animateTimer(HUMAN_QUESTION_MS,()=>{});
   await sleep(think);
   if(token!==runId||!pending)return;
 
   stopQuestionTimer(false);
-  const aCorrect=Math.random()<.62,dCorrect=Math.random()<.62;
-  const wrongIndex=()=>{const arr=[0,1,2,3].filter(i=>i!==q[2]);return arr[Math.floor(Math.random()*arr.length)];};
-  const ai=aCorrect?q[2]:wrongIndex();
-  const di=dCorrect?q[2]:wrongIndex();
-  buttons[ai].classList.add('botAttacker');
-  buttons[di].classList.add('botDefender');
-  document.documentElement.style.setProperty('--attacker-color',COLORS[pending.attacker]);
-  document.documentElement.style.setProperty('--defender-color',COLORS[def]);
-  buttons[q[2]].classList.add('correct');
-  $('battleResult').textContent=NAMES[pending.attacker]+': '+(aCorrect?'верно':'ошибка')+' · '+NAMES[def]+': '+(dCorrect?'верно':'ошибка');
+  const ai=botChoiceIndex(q);
+  const di=botChoiceIndex(q);
+  revealMcq(q,ai,di,def);
+  const aCorrect=ai===q[2],dCorrect=di===q[2];
+  $('battleResult').textContent=choiceResultText(q,ai,di,def);
 
-  await sleep(BOT_RESULT_MS);
+  await sleep(ANSWER_REVEAL_MS);
   if(token!==runId||!pending)return;
   if(aCorrect&&dCorrect)return botVsBotNumeric(def);
   const winner=aCorrect&&!dCorrect?'ATTACKER':'DEFENDER';
@@ -428,8 +446,8 @@ async function botVsBotNumeric(def){
   $('qText').textContent=q[0];
   $('answers').style.display='none';
   $('battleResult').textContent=NAMES[pending.attacker]+' и '+NAMES[def]+' считают…';
-  const think=randomMs(1500,2500);
-  animateTimer(think,()=>{});
+  const think=randomMs(BOT_THINK_MIN,BOT_THINK_MAX);
+  animateTimer(HUMAN_QUESTION_MS,()=>{});
   await sleep(think);
   if(token!==runId||!pending)return;
 
@@ -439,7 +457,7 @@ async function botVsBotNumeric(def){
   const dg=ans*(1+(Math.random()-.5)*.28);
   const winner=Math.abs(ag-ans)<=Math.abs(dg-ans)?'ATTACKER':'DEFENDER';
   $('battleResult').textContent=NAMES[pending.attacker]+': '+(Math.round(ag*100)/100)+' · '+NAMES[def]+': '+(Math.round(dg*100)/100);
-  await sleep(BOT_RESULT_MS);
+  await sleep(ANSWER_REVEAL_MS);
   if(token!==runId||!pending)return;
   closeQuestion();
   applyDuel(winner);
@@ -555,6 +573,7 @@ function renderMap(){
   if(window.layoutPirateMap)window.layoutPirateMap(legal);
 }
 function renderHud(){
+  document.body.dataset.phase=S.phase;
   $('coinsV').textContent=S.players.R.coins;
   $('fameV').textContent=fame('R');
   $('secretBtn').innerHTML='🗺<small>×'+S.players.R.secret+'</small>';
@@ -598,6 +617,16 @@ function renderOrder(){
   const current=claim?S.claimIndex:S.idx;
   $('turnCaption').textContent=claim?'Порядок освоения':'Порядок хода';
   (order||[]).forEach((p,i)=>{
+    if(claim){
+      const mark=document.createElement('span');
+      mark.className='claimOrderMark';
+      if(i<current)mark.classList.add('done');
+      if(i===current&&!S.finished)mark.classList.add('current');
+      mark.style.setProperty('--claim-color',COLORS[p]);
+      mark.title=NAMES[p];
+      root.appendChild(mark);
+      return;
+    }
     const row=document.createElement('div');
     row.className='turnRow';
     if(i<current)row.classList.add('done');

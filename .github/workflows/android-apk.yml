@@ -50,6 +50,10 @@ jobs:
           assert "botVsBotMcq" in game and "BOT_THINK_MIN" in game
           assert "baseVisualOwner" in game
           assert "HUMAN_QUESTION_MS=20000" in game
+          assert "ANSWER_REVEAL_MS=3000" in game
+          assert "correctReveal" in game
+          assert "claimOrderMark" in game
+          assert "setupGestures" in ui
           assert "MAP_SVG" in visual and "ARTS={" in visual
           assert "fitPirateMap" in ui
           print("No-flagship clean runtime sanity: OK")
