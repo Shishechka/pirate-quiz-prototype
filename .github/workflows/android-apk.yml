@@ -50,6 +50,7 @@ jobs:
           assert "phase:'CLAIM'" in game
           assert "botVsBotMcq" in game and "BOT_THINK_MIN" in game
           assert "baseVisualOwner" in game
+          assert "defenseFame" in game and "+1 слава за защиту" in game
           assert "HUMAN_QUESTION_MS=20000" in game
           assert "ANSWER_REVEAL_MS=3000" in game
           assert "correctReveal" in game and "attackerFull" in game and "defenderFull" in game and "samePick" in game
