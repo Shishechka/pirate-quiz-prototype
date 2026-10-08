@@ -1,4 +1,5 @@
 'use strict';
+// unified-map-v1
 (function(){
   const esc=s=>'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(s);
 
