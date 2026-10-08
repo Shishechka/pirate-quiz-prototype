@@ -117,11 +117,11 @@ function botClaimChoice(p){
 }
 function startClaimRound(){
   if(!S||S.phase!=='CLAIM')return;
-  const rank=shuffle(PLAYERS);
-  S.claimRank=rank;
-  S.claimQueue=[...rank,rank[0],rank[1]];
+  const plan=S.claimOrders[S.claimRound-1];
+  S.claimRank=plan.rank;
+  S.claimQueue=plan.queue;
   S.claimIndex=0;
-  log('Освоение '+S.claimRound+'/6: '+rank.map(p=>NAMES[p]).join(' → '));
+  log('Освоение '+S.claimRound+'/6: '+plan.rank.map(p=>NAMES[p]).join(' → '));
   render();
   advanceClaim();
 }
@@ -191,6 +191,10 @@ function newGame(){
   S={
     phase:'CLAIM',
     claimRound:1,claimRank:[],claimQueue:[],claimIndex:0,
+    claimOrders:Array.from({length:6},()=>{
+      const rank=shuffle(PLAYERS);
+      return{rank,queue:[...rank,rank[0],rank[1]]};
+    }),
     round:1,orders:Array.from({length:8},()=>shuffle(PLAYERS)),order:[],idx:0,
     owners:{},bases:{A:3,B:3,C:3,D:3},captured:{A:null,B:null,C:null,D:null},
     players:{},finished:false
@@ -613,24 +617,33 @@ function renderOrder(){
   const root=$('turnTimeline');
   root.innerHTML='';
   const claim=S.phase==='CLAIM';
-  const order=claim?S.claimQueue:S.order;
-  const current=claim?S.claimIndex:S.idx;
   $('turnCaption').textContent=claim?'Порядок освоения':'Порядок хода';
-  (order||[]).forEach((p,i)=>{
-    if(claim){
-      const mark=document.createElement('span');
-      mark.className='claimOrderMark';
-      if(i<current)mark.classList.add('done');
-      if(i===current&&!S.finished)mark.classList.add('current');
-      mark.style.setProperty('--claim-color',COLORS[p]);
-      mark.title=NAMES[p];
-      root.appendChild(mark);
-      return;
-    }
+
+  if(claim){
+    S.claimOrders.forEach((plan,roundIndex)=>{
+      const row=document.createElement('div');
+      row.className='claimRoundRow';
+      if(roundIndex<S.claimRound-1)row.classList.add('doneRound');
+      if(roundIndex===S.claimRound-1)row.classList.add('currentRound');
+      plan.queue.forEach((p,i)=>{
+        const mark=document.createElement('span');
+        mark.className='claimOrderMark';
+        if(roundIndex===S.claimRound-1&&i<S.claimIndex)mark.classList.add('done');
+        if(roundIndex===S.claimRound-1&&i===S.claimIndex&&!S.finished)mark.classList.add('current');
+        mark.style.setProperty('--claim-color',COLORS[p]);
+        mark.title='Раунд '+(roundIndex+1)+' · '+NAMES[p];
+        row.appendChild(mark);
+      });
+      root.appendChild(row);
+    });
+    return;
+  }
+
+  S.order.forEach((p,i)=>{
     const row=document.createElement('div');
     row.className='turnRow';
-    if(i<current)row.classList.add('done');
-    if(i===current&&!S.finished)row.classList.add('current');
+    if(i<S.idx)row.classList.add('done');
+    if(i===S.idx&&!S.finished)row.classList.add('current');
     row.innerHTML='<span class="turnDot" style="--turn-color:'+COLORS[p]+'"></span><span>'+NAMES[p]+'</span><span class="turnStep">'+(i+1)+'</span>';
     root.appendChild(row);
   });

@@ -26,12 +26,14 @@
     '.timeline{display:flex!important;flex-direction:column!important;gap:6px!important;align-items:stretch!important;justify-content:flex-start!important}',
     '.turnCaption{display:block!important}',
     '.rightRail .boostBtn{position:relative!important}',
-    'body[data-phase="CLAIM"] .turnBoard{position:absolute!important;right:222px!important;top:82px!important;width:auto!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;pointer-events:none!important}',
+    'body[data-phase="CLAIM"] .turnBoard{align-self:flex-end!important;width:auto!important;padding:0!important;margin-top:20px!important;background:transparent!important;border:0!important;box-shadow:none!important;pointer-events:none!important}',
     'body[data-phase="CLAIM"] .turnCaption{display:none!important}',
-    'body[data-phase="CLAIM"] .timeline{display:flex!important;flex-direction:row!important;gap:5px!important;align-items:center!important;width:auto!important}',
-    '.claimOrderMark{display:block;width:24px;height:8px;border-radius:3px;background:var(--claim-color);box-shadow:0 1px 3px rgba(31,15,6,.7);opacity:.88}',
-    '.claimOrderMark.done{opacity:.28}.claimOrderMark.current{height:10px;opacity:1;outline:2px solid #fff0b7;box-shadow:0 0 7px #fff0b7}',
-    '@media(max-height:620px){body[data-phase="CLAIM"] .turnBoard{right:194px!important;top:70px!important}.claimOrderMark{width:20px;height:7px}}'
+    'body[data-phase="CLAIM"] .timeline{display:flex!important;flex-direction:column!important;gap:7px!important;align-items:flex-end!important;width:auto!important}',
+    '.claimRoundRow{display:flex;gap:3px;align-items:center;justify-content:flex-end;opacity:.48}',
+    '.claimRoundRow.doneRound{opacity:.18}.claimRoundRow.currentRound{opacity:1}',
+    '.claimOrderMark{display:block;width:16px;height:5px;border-radius:3px;background:var(--claim-color);box-shadow:0 1px 2px rgba(31,15,6,.65)}',
+    '.claimOrderMark.done{opacity:.28}.claimOrderMark.current{height:8px;opacity:1;outline:2px solid #fff0b7;outline-offset:1px;box-shadow:0 0 8px #fff0b7}',
+    '@media(max-height:620px){body[data-phase="CLAIM"] .turnBoard{margin-top:8px!important}.claimOrderMark{width:14px;height:4px}.claimRoundRow{gap:2px}}'
   ].join('');
   document.head.appendChild(style);
 
@@ -76,8 +78,7 @@
   const view={baseScale:1,zoom:1,tx:0,ty:0,minZoom:1,maxZoom:2.6,pointers:new Map(),moved:false,blockClick:false};
   function usableRect(){
     const vp=document.getElementById('mapViewport');
-    const left=18,top=68,right=Math.max(left+600,vp.clientWidth-224),bottom=Math.max(top+360,vp.clientHeight-18);
-    return{left,top,right,bottom,width:right-left,height:bottom-top};
+    return{left:0,top:0,right:vp.clientWidth,bottom:vp.clientHeight,width:vp.clientWidth,height:vp.clientHeight};
   }
   function currentScale(){return view.baseScale*view.zoom;}
   function clampView(){
@@ -96,10 +97,10 @@
     const vp=document.getElementById('mapViewport');
     if(!vp||!vp.clientWidth||!vp.clientHeight)return;
     const u=usableRect();
-    view.baseScale=Math.min(u.width/1600,u.height/900)*.98;
+    view.baseScale=Math.max(u.width/1600,u.height/900)*.96;
     view.zoom=1;
-    view.tx=u.left+(u.width-1600*view.baseScale)/2;
-    view.ty=u.top+(u.height-900*view.baseScale)/2;
+    view.tx=(u.width-1600*view.baseScale)/2;
+    view.ty=(u.height-900*view.baseScale)/2;
     applyView();
   };
   function zoomAt(mult,clientX,clientY){
