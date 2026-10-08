@@ -52,10 +52,12 @@ jobs:
           assert "baseVisualOwner" in game
           assert "HUMAN_QUESTION_MS=20000" in game
           assert "ANSWER_REVEAL_MS=3000" in game
-          assert "correctReveal" in game
-          assert "claimOrderMark" in game and "claimOrders" in game
+          assert "correctReveal" in game and "attackerPick" in game and "defenderPick" in game
+          assert "orderMark" in game and "claimOrders" in game
+          assert "S.orders" in game
           assert "showNumericReveal" in game and "NUMERIC_REORDER_DELAY" in game
           assert "setupGestures" in ui
+          assert "right:226px" in ui and "orderMark" in ui
           assert "Math.max(u.width/1600,u.height/900)*.96" in ui
           assert Path("docs/no-flagship-ui-spec.md").exists()
           assert "ISLAND_SPRITE" in art and "data:image/webp;base64" in art

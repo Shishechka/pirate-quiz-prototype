@@ -41,7 +41,7 @@ button,input{font:inherit}
 .playerBadge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:10px;background:#fff7ddaa;border:1px solid #9d7748}.playerBadge i{width:10px;height:10px;border-radius:50%;background:var(--badge)}
 .attackArrow{font-size:18px;color:#6f241d}.targetBadge{padding:5px 9px;border-radius:10px;background:#6f241d;color:#fff1d0}
 .sheet h2{margin:7px 0 15px;font-family:Georgia,serif;font-size:24px;text-align:center}
-.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}.answer{--attacker-fill:#3f2a1b;--defender-fill:#3f2a1b;min-height:55px;border-radius:12px;background:linear-gradient(90deg,var(--attacker-fill) 0 50%,var(--defender-fill) 50% 100%);color:#fff0cf;border:2px solid #9b7542;padding:11px 13px;text-align:left;font-weight:800;text-shadow:0 1px 2px #201006;transition:background .18s,box-shadow .18s,outline-color .18s}.answer:disabled{opacity:1}.answer.correctReveal{outline:3px solid #62e66d;outline-offset:2px;box-shadow:0 0 16px rgba(78,255,104,.9),inset 0 0 0 1px rgba(205,255,211,.8)}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}.answer{--attacker-color:transparent;--defender-color:transparent;position:relative;isolation:isolate;overflow:hidden;min-height:55px;border-radius:12px;background:#3f2a1b;color:#fff0cf;border:2px solid #9b7542;padding:11px 13px;text-align:left;font-weight:800;text-shadow:0 1px 2px #201006;transition:box-shadow .18s,outline-color .18s}.answer:before,.answer:after{content:"";position:absolute;top:0;bottom:0;width:50%;z-index:-1;opacity:0;transition:opacity .18s}.answer:before{left:0;background:var(--attacker-color)}.answer:after{right:0;background:var(--defender-color)}.answer.attackerPick:before,.answer.defenderPick:after{opacity:1}.answer:disabled{opacity:1}.answer.correctReveal{outline:3px solid #62e66d;outline-offset:2px;box-shadow:0 0 16px rgba(78,255,104,.9)}
 .numericBox{display:none}.numrow{display:flex;gap:8px}.numrow input{flex:1;padding:12px;border-radius:10px;border:1px solid #9b7b49;background:#fff9e8;color:#25180d;font-size:18px}.btn.gold{background:#704518;color:#fff0ca;border-radius:10px;padding:10px 16px}
 #battleResult{min-height:24px;margin-top:12px;text-align:center;font-size:13px;font-weight:800;color:#5a4025}.numericCorrect{font-size:15px;margin:8px 0 10px}.numericRanking{display:flex;flex-direction:column;gap:8px;max-width:470px;margin:0 auto}.numericAnswerRow{display:grid;grid-template-columns:24px 14px 1fr auto;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:#fff6dda8;border:1px solid #9a7649;text-align:left;transition:transform .28s,background .28s}.numericAnswerRow i{width:12px;height:12px;border-radius:3px;background:var(--numeric-color)}.numericAnswerRow>span:last-child{font-size:18px;font-weight:900}.numericWinner{background:#fff3b8;box-shadow:0 0 0 2px #d6a937,0 0 12px #d6a93766}.numericWinner .numericRank{font-weight:900;color:#7b541c}.numericLoser{opacity:.76}
 .finalTable{width:100%;border-collapse:collapse}.finalTable th,.finalTable td{padding:8px;border-bottom:1px solid #8c6b3e55;text-align:center}.finalActions{display:flex;justify-content:center;margin-top:14px}.finalActions button{padding:10px 18px;border-radius:10px;background:#704518;color:#fff0ca;border:0;font-weight:900}
@@ -66,10 +66,10 @@ button,input{font:inherit}
     <div class="parchmentChip"><span class="resourceIcon">★</span><span class="resourceText"><small>Слава</small><b id="fameV">0</b></span></div>
   </div>
   <aside class="rightRail">
-    <div class="turnBoard"><div id="turnCaption" class="turnCaption">Порядок освоения</div><div id="turnTimeline" class="timeline"></div></div>
     <div class="boostStack"><button id="secretBtn" class="boostBtn" aria-label="Тайный путь">🗺<small>×1</small></button></div>
     <button id="actionBtn" class="actionBtn" disabled>Выбери остров</button>
   </aside>
+  <div class="turnBoard" aria-label="Порядок ходов"><div id="turnCaption" class="turnCaption"></div><div id="turnTimeline" class="timeline"></div></div>
   <div id="log" hidden></div>
 </main>
 <div id="questionOverlay" class="overlay">

@@ -307,9 +307,18 @@ function revealMcq(q,attackerChoice,defenderChoice,defender){
   const buttons=[...$('answers').children];
   buttons.forEach((b,i)=>{
     b.disabled=true;
-    b.style.setProperty('--attacker-fill',i===attackerChoice?COLORS[pending.attacker]:'#3f2a1b');
-    b.style.setProperty('--defender-fill',i===defenderChoice?COLORS[defender]:'#3f2a1b');
-    b.classList.toggle('correctReveal',i===q[2]);
+    b.classList.remove('attackerPick','defenderPick','correctReveal');
+    b.style.removeProperty('--attacker-color');
+    b.style.removeProperty('--defender-color');
+    if(i===attackerChoice){
+      b.classList.add('attackerPick');
+      b.style.setProperty('--attacker-color',COLORS[pending.attacker]);
+    }
+    if(i===defenderChoice){
+      b.classList.add('defenderPick');
+      b.style.setProperty('--defender-color',COLORS[defender]);
+    }
+    if(i===q[2])b.classList.add('correctReveal');
   });
 }
 function choiceResultText(q,attackerChoice,defenderChoice,defender){
@@ -656,36 +665,40 @@ function renderHud(){
 function renderOrder(){
   const root=$('turnTimeline');
   root.innerHTML='';
+  $('turnCaption').textContent='';
   const claim=S.phase==='CLAIM';
-  $('turnCaption').textContent=claim?'Порядок освоения':'Порядок хода';
+  const plans=claim?S.claimOrders:S.orders;
+  const currentRound=claim?S.claimRound-1:S.round-1;
+  const currentIndex=claim?S.claimIndex:S.idx;
+  const currentPlayer=claim?currentClaimPlayer():(S.order[S.idx]||null);
 
-  if(claim){
-    S.claimOrders.forEach((plan,roundIndex)=>{
-      const group=document.createElement('div');
-      group.className='claimRoundGroup';
-      if(roundIndex<S.claimRound-1)group.classList.add('doneRound');
-      if(roundIndex===S.claimRound-1)group.classList.add('currentRound');
-      const activePlayer=roundIndex===S.claimRound-1?currentClaimPlayer():null;
-      plan.rank.forEach(p=>{
-        const mark=document.createElement('span');
-        mark.className='claimOrderMark';
-        if(roundIndex===S.claimRound-1&&p===activePlayer&&!S.finished)mark.classList.add('current');
-        mark.style.setProperty('--claim-color',COLORS[p]);
-        mark.title=NAMES[p];
-        group.appendChild(mark);
-      });
-      root.appendChild(group);
+  plans.forEach((plan,roundIndex)=>{
+    const order=claim?plan.rank:plan;
+    const group=document.createElement('div');
+    group.className='orderGroup';
+    if(roundIndex<currentRound)group.classList.add('doneRound');
+    if(roundIndex===currentRound)group.classList.add('currentRound');
+    if(roundIndex>currentRound)group.classList.add('futureRound');
+
+    order.forEach((p,i)=>{
+      const mark=document.createElement('span');
+      mark.className='orderMark';
+      mark.style.setProperty('--order-color',COLORS[p]);
+      mark.title='Раунд '+(roundIndex+1)+' · '+NAMES[p];
+
+      if(roundIndex===currentRound){
+        if(claim){
+          if(p===currentPlayer&&!S.finished)mark.classList.add('current');
+          const completedPlayers=new Set(S.claimQueue.slice(0,currentIndex));
+          if(completedPlayers.has(p)&&p!==currentPlayer)mark.classList.add('done');
+        }else{
+          if(i<currentIndex)mark.classList.add('done');
+          if(i===currentIndex&&!S.finished)mark.classList.add('current');
+        }
+      }
+      group.appendChild(mark);
     });
-    return;
-  }
-
-  S.order.forEach((p,i)=>{
-    const row=document.createElement('div');
-    row.className='turnRow';
-    if(i<S.idx)row.classList.add('done');
-    if(i===S.idx&&!S.finished)row.classList.add('current');
-    row.innerHTML='<span class="turnDot" style="--turn-color:'+COLORS[p]+'"></span><span>'+NAMES[p]+'</span><span class="turnStep">'+(i+1)+'</span>';
-    root.appendChild(row);
+    root.appendChild(group);
   });
 }
 
