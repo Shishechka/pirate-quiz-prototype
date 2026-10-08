@@ -16,22 +16,27 @@ button,input{font:inherit}
 #map{position:absolute;inset:0}
 .tile,.base{position:absolute;transform:translate(-50%,-50%);touch-action:none}
 .hud{position:absolute;z-index:30;pointer-events:none}.hud>*{pointer-events:auto}
-.topHud{left:0;right:0;top:max(8px,env(safe-area-inset-top));display:flex;justify-content:space-between;padding:0 20px}
-.parchmentChip{height:52px;min-width:118px;padding:6px 12px;border-radius:12px;border:1px solid #87683d;background:linear-gradient(#f1dfb7,#d6b377);box-shadow:0 3px 8px #1a0c06a6;color:#2d1e11;display:flex;align-items:center;gap:9px;font:800 14px system-ui,sans-serif}
-.resourceIcon{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:#865923;color:#fff;border:2px solid #edcd78}
-.resourceText small{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6a5233}.resourceText b{font-size:20px}
-.roundCard{position:absolute;left:50%;top:0;transform:translateX(-50%);width:285px;text-align:center;padding:6px 15px 8px;border-radius:0 0 16px 16px;border:1px solid #826138;background:linear-gradient(#f4e1b8,#dab77a);box-shadow:0 4px 10px #2a160aa0;font-family:system-ui,sans-serif}
+.topHud{left:0;right:0;top:0;display:block;padding:0}
+.roundCard{position:absolute;left:50%;top:0;transform:translateX(-50%);width:285px;text-align:center;padding:6px 15px 8px;border-radius:0 0 16px 16px;border:1px solid #826138;border-top:0;background:linear-gradient(#f4e1b8,#dab77a);box-shadow:0 4px 10px #2a160aa0;font-family:system-ui,sans-serif}
 .roundCard b{font-size:20px}.roundCard span{display:block;margin-top:3px;padding:3px 7px;border-radius:8px;background:#6f241d;color:#fff1d0;font-size:11px;font-weight:800;line-height:1.2}
-.rightRail{position:absolute;z-index:31;right:18px;top:88px;bottom:18px;width:190px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+.standingsPanel{position:absolute;z-index:31;left:14px;top:76px;width:132px;padding:7px 8px 8px;border-radius:11px;background:rgba(35,20,11,.38);border:1px solid rgba(255,232,181,.20);box-shadow:0 3px 10px rgba(20,10,5,.24);color:#fff0cf;font-family:system-ui,sans-serif;pointer-events:none}
+.standingsHead{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;gap:4px;padding:0 3px 5px;font-size:7px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,240,207,.68);text-align:center}
+.standingRow{height:23px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;gap:4px;border-radius:7px;padding:0 3px;color:#fff2d2;font-size:11px;font-weight:900;text-align:center}
+.standingRow+ .standingRow{margin-top:2px}.standingRow.human{background:rgba(255,244,214,.10)}
+.standingPlace,.standingScore{font-variant-numeric:tabular-nums}.standingColor{width:25px;height:7px;border-radius:2px;background:var(--standing-color);justify-self:center;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+.rightRail{position:absolute;z-index:31;right:14px;top:16px;bottom:18px;width:70px;display:flex;flex-direction:column;align-items:stretch;gap:7px;pointer-events:none}
+.resourceMini{height:32px;display:grid;grid-template-columns:24px 1fr;align-items:center;gap:5px;padding:0 7px;border-radius:10px;background:rgba(35,20,11,.38);border:1px solid rgba(255,232,181,.18);box-shadow:0 3px 9px rgba(20,10,5,.22);color:#fff1d2;font:900 13px system-ui,sans-serif;pointer-events:none}
+.resourceMini span{text-align:center;font-size:16px}.resourceMini b{text-align:right;font-size:16px;font-variant-numeric:tabular-nums}
 .turnBoard{pointer-events:none;padding:11px;border-radius:15px;border:1px solid #755831;background:linear-gradient(#edd7a5ee,#c99f61ee);box-shadow:0 4px 12px #170c06a8;font-family:system-ui,sans-serif}
 .turnCaption{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#604727;font-weight:900;margin:0 0 8px}
 .timeline{display:flex;flex-direction:column;gap:6px}
 .turnRow{height:30px;display:grid;grid-template-columns:16px 1fr 18px;align-items:center;gap:7px;padding:0 7px;border-radius:8px;background:rgba(255,245,216,.28);font:800 10px system-ui,sans-serif;color:#3b2918}
 .turnRow.done{opacity:.4}.turnRow.current{background:rgba(111,36,29,.92);color:#fff1d0;box-shadow:0 0 0 2px rgba(255,235,178,.72)}
 .turnDot{width:11px;height:11px;border-radius:50%;background:var(--turn-color);box-shadow:0 0 0 1px rgba(46,28,15,.45)}.turnStep{text-align:right;font-size:9px;opacity:.7}
-.boostStack{margin-top:auto;display:flex;justify-content:flex-end;pointer-events:auto}
-.boostBtn{width:58px;height:56px;border-radius:13px;border:1px solid #76562e;background:linear-gradient(#e8ce95,#bd9152);box-shadow:0 3px 8px #1d0e07a8;color:#332313;font-size:23px;font-weight:900;position:relative}.boostBtn small{position:absolute;right:5px;bottom:3px;background:#2c1e12;color:#f5e5bc;border-radius:8px;padding:1px 5px;font-size:10px}.boostBtn.on{outline:3px solid #f4d166}
-.actionBtn{pointer-events:auto;width:190px;height:64px;border-radius:32px;border:4px solid #d1a54d;background:radial-gradient(circle at 45% 35%,#b83a31,#761e18 67%,#46100d);color:#fff1cf;text-shadow:0 2px #45110c;box-shadow:0 4px 11px #180b06c9;font-weight:900;font-size:18px}.actionBtn:disabled{opacity:.5;filter:grayscale(.7)}
+.boostStack{display:flex;justify-content:center;pointer-events:auto}
+.boostBtn{width:56px;height:50px;border-radius:11px;border:1px solid rgba(255,232,181,.24);background:rgba(35,20,11,.42);box-shadow:0 3px 9px rgba(20,10,5,.24);color:#fff1d2;font-size:22px;font-weight:900;position:relative}.boostBtn small{position:absolute;right:4px;bottom:3px;background:rgba(20,12,7,.78);color:#f5e5bc;border-radius:7px;padding:1px 5px;font-size:10px}.boostBtn.on{outline:2px solid #f4d166;box-shadow:0 0 9px #f4d16666}
+.actionBtn{pointer-events:auto;position:absolute;right:0;bottom:0;width:168px;height:58px;border-radius:29px;border:3px solid #d1a54d;background:radial-gradient(circle at 45% 35%,#b83a31,#761e18 67%,#46100d);color:#fff1cf;text-shadow:0 2px #45110c;box-shadow:0 4px 11px #180b06c9;font-weight:900;font-size:16px}.actionBtn:disabled{opacity:.5;filter:grayscale(.7)}
+body[data-phase="CLAIM"] .actionBtn{display:none!important}
 .overlay{position:absolute;inset:0;background:#160e08c7;display:none;place-items:center;z-index:70;padding:26px}.overlay.show{display:grid}
 .sheet{width:min(820px,88vw);max-height:84vh;overflow:auto;background:linear-gradient(#f5e7c5,#d9bc83);border:3px solid #795833;border-radius:20px;padding:20px;color:#2b1d11;font-family:system-ui,sans-serif;box-shadow:0 18px 60px #0009}
 .questionSheet{position:relative;padding-top:30px;overflow:hidden}
@@ -45,7 +50,7 @@ button,input{font:inherit}
 .numericBox{display:none}.numrow{display:flex;gap:8px}.numrow input{flex:1;padding:12px;border-radius:10px;border:1px solid #9b7b49;background:#fff9e8;color:#25180d;font-size:18px}.btn.gold{background:#704518;color:#fff0ca;border-radius:10px;padding:10px 16px}
 #battleResult{min-height:24px;margin-top:12px;text-align:center;font-size:13px;font-weight:800;color:#5a4025}.numericCorrect{font-size:15px;margin:8px 0 10px}.numericRanking{display:flex;flex-direction:column;gap:8px;max-width:470px;margin:0 auto}.numericAnswerRow{display:grid;grid-template-columns:24px 14px 1fr auto;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:#fff6dda8;border:1px solid #9a7649;text-align:left;transition:transform .28s,background .28s}.numericAnswerRow i{width:12px;height:12px;border-radius:3px;background:var(--numeric-color)}.numericAnswerRow>span:last-child{font-size:18px;font-weight:900}.numericWinner{background:#fff3b8;box-shadow:0 0 0 2px #d6a937,0 0 12px #d6a93766}.numericWinner .numericRank{font-weight:900;color:#7b541c}.numericLoser{opacity:.76}
 .finalTable{width:100%;border-collapse:collapse}.finalTable th,.finalTable td{padding:8px;border-bottom:1px solid #8c6b3e55;text-align:center}.finalActions{display:flex;justify-content:center;margin-top:14px}.finalActions button{padding:10px 18px;border-radius:10px;background:#704518;color:#fff0ca;border:0;font-weight:900}
-@media(max-height:620px){.parchmentChip{height:45px;min-width:100px}.resourceIcon{width:30px;height:30px}.roundCard{width:250px}.rightRail{top:72px;right:12px;bottom:12px;width:166px;gap:8px}.turnBoard{padding:8px}.turnRow{height:24px}.actionBtn{width:166px;height:55px;font-size:16px}.boostBtn{width:50px;height:48px}.sheet{max-height:90vh}}
+@media(max-height:620px){.roundCard{width:250px}.rightRail{right:10px;top:10px;bottom:10px;width:62px;gap:5px}.resourceMini{height:27px;padding:0 5px;grid-template-columns:20px 1fr}.resourceMini span{font-size:14px}.resourceMini b{font-size:14px}.boostBtn{width:50px;height:44px}.actionBtn{width:154px;height:52px;font-size:15px}.standingsPanel{left:10px;top:66px;width:120px;padding:6px}.standingRow{height:20px;font-size:10px}.standingColor{width:22px}.sheet{max-height:90vh}}
 </style>
 </head>
 <body>
@@ -61,11 +66,17 @@ button,input{font:inherit}
     </div>
   </div>
   <div class="hud topHud">
-    <div class="parchmentChip"><span class="resourceIcon">🪙</span><span class="resourceText"><small>Дублоны</small><b id="coinsV">20</b></span></div>
     <div class="roundCard"><b id="roundV">Освоение 1/6</b><span id="status">Подготовка карты…</span></div>
-    <div class="parchmentChip"><span class="resourceIcon">★</span><span class="resourceText"><small>Слава</small><b id="fameV">0</b></span></div>
   </div>
+
+  <aside class="standingsPanel" aria-label="Текущие места">
+    <div class="standingsHead"><span>Место</span><span>Цвет</span><span>Слава</span></div>
+    <div id="standingsRows"></div>
+  </aside>
+
   <aside class="rightRail">
+    <div class="resourceMini"><span>🪙</span><b id="coinsV">20</b></div>
+    <div class="resourceMini"><span>★</span><b id="fameV">0</b></div>
     <div class="boostStack"><button id="secretBtn" class="boostBtn" aria-label="Тайный путь">🗺<small>×1</small></button></div>
     <button id="actionBtn" class="actionBtn" disabled>Выбери остров</button>
   </aside>

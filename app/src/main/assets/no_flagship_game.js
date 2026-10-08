@@ -600,6 +600,7 @@ function render(){
   if(!S)return;
   renderMap();
   renderHud();
+  renderStandings();
   renderOrder();
 }
 
@@ -671,6 +672,23 @@ function renderHud(){
     $('actionBtn').disabled=true;
   }
 }
+function renderStandings(){
+  const root=$('standingsRows');
+  if(!root)return;
+  root.innerHTML='';
+  const rows=PLAYERS
+    .map((p,stable)=>({p,score:fame(p),stable}))
+    .sort((a,b)=>b.score-a.score||a.stable-b.stable);
+  rows.forEach((row,index)=>{
+    const el=document.createElement('div');
+    el.className='standingRow'+(row.p==='R'?' human':'');
+    el.innerHTML='<span class="standingPlace">'+(index+1)+'</span>'+
+      '<span class="standingColor" style="--standing-color:'+COLORS[row.p]+'"></span>'+
+      '<span class="standingScore">'+row.score+'</span>';
+    root.appendChild(el);
+  });
+}
+
 function renderOrder(){
   const root=$('turnTimeline');
   root.innerHTML='';
