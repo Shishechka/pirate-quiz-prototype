@@ -121,8 +121,8 @@
 
   var view={baseScale:1,zoom:1,tx:0,ty:0,minZoom:1,maxZoom:2.35,pointers:new Map(),startDist:0,startZoom:1,startMid:null,startTx:0,startTy:0,moved:false,blockClick:false};
   function currentScale(){return view.baseScale*view.zoom;}
-  function contentBounds(){var left=1e9,right=-1e9,top=1e9,bottom=-1e9;for(var i=1;i<=36;i++){var p=posOfUi(i),rx=lv(i)===3?52:lv(i)===2?46:41,ry=lv(i)===3?43:lv(i)===2?38:34;left=Math.min(left,p.x-rx);right=Math.max(right,p.x+rx);top=Math.min(top,p.y-ry);bottom=Math.max(bottom,p.y+ry);}['A','B','C','D'].forEach(function(b){var p=BASE_POS[b];left=Math.min(left,p.x-72);right=Math.max(right,p.x+72);top=Math.min(top,p.y-62);bottom=Math.max(bottom,p.y+62);});return{left:left-56,right:right+56,top:top-56,bottom:bottom+56};}
-  function usableRect(){var vp=$('mapViewport'),left=14,top=72,right=Math.max(320,vp.clientWidth-170),bottom=Math.max(top+200,vp.clientHeight-72);return{left:left,top:top,right:right,bottom:bottom,width:right-left,height:bottom-top};}
+  function contentBounds(){return{left:0,right:1600,top:0,bottom:900};}
+  function usableRect(){var vp=$('mapViewport'),left=24,top=68,right=Math.max(left+560,vp.clientWidth-220),bottom=Math.max(top+320,vp.clientHeight-22);return{left:left,top:top,right:right,bottom:bottom,width:right-left,height:bottom-top};}
   function clampView(){var scale=currentScale(),b=contentBounds(),u=usableRect(),cw=(b.right-b.left)*scale,ch=(b.bottom-b.top)*scale,minX=u.right-b.right*scale,maxX=u.left-b.left*scale,minY=u.bottom-b.bottom*scale,maxY=u.top-b.top*scale;if(cw<=u.width)view.tx=u.left+(u.width-cw)/2-b.left*scale;else view.tx=Math.min(maxX,Math.max(minX,view.tx));if(ch<=u.height)view.ty=u.top+(u.height-ch)/2-b.top*scale;else view.ty=Math.min(maxY,Math.max(minY,view.ty));}
   function applyView(){clampView();$('mapScene').style.transform='translate('+view.tx+'px,'+view.ty+'px) scale('+currentScale()+')';}
   window.resetMapView=function(){var vp=$('mapViewport');if(!vp||!vp.clientWidth||!vp.clientHeight)return;var b=contentBounds(),u=usableRect();view.baseScale=Math.min(u.width/(b.right-b.left),u.height/(b.bottom-b.top));view.zoom=1;view.tx=u.left+(u.width-(b.right-b.left)*view.baseScale)/2-b.left*view.baseScale;view.ty=u.top+(u.height-(b.bottom-b.top)*view.baseScale)/2-b.top*view.baseScale;applyView();};
@@ -140,5 +140,5 @@
   $('modeBtn').onclick=function(){if(S.order[S.idx]!=='R'||S.finished)return;if(humanMode==='MOVE'){humanMode='ATTACK';render();}else if(humanMode==='POST'){humanEndAfterPost();}};
   $('newBtn').onclick=newGame;
   setupGestures();
-  newGame();
+  if(!window.__PIRATES_MANUAL_BOOT__)newGame();
 })();

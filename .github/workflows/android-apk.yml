@@ -38,7 +38,7 @@ jobs:
           game=Path("app/src/main/assets/game.js").read_text()
           ui=Path("app/src/main/assets/ui_patch.js").read_text()
           index=Path("app/src/main/assets/index.html").read_text()
-          visual=Path("app/src/main/assets/v1_1_visual_patch.js").read_text()
+          visual=Path("app/src/main/assets/v3_visual_patch.js").read_text()
           noflag=Path("app/src/main/assets/no_flagship_mode.js").read_text()
           assert "for(let i=1;i<=36;i++)" in game
           assert "Array.from({length:8}" in ui
@@ -47,12 +47,12 @@ jobs:
           assert "marks.every(n=>n===4)" in visual
           assert "totalMarks===32" in visual
           assert "contentBounds()" in ui and "usableRect()" in ui
-          assert "v1_1_visual_patch.js" in index
+          assert "v3_visual_patch.js" in index\n          assert "v1_1_visual_patch.js" not in index
           assert "no_flagship_mode.js" in index
           assert "balance_test_patch.js" not in index
           assert "phase:'CLAIM'" in noflag
           assert "Ship gameplay disabled" in noflag
-          assert "MAP_SVG" in visual and "ARTS={" in visual
+          assert "--island-sprite" in ui\n          assert "__PIRATES_MANUAL_BOOT__" in index\n          assert "questionTimerFill" in index\n          assert "QUESTION_MS=20000" in noflag
           print("Pirates no-flagship source sanity: OK")
           PY
 
