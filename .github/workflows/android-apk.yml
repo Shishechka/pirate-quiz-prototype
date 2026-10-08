@@ -38,11 +38,12 @@ jobs:
           index=Path("app/src/main/assets/index.html").read_text()
           game=Path("app/src/main/assets/no_flagship_game.js").read_text()
           ui=Path("app/src/main/assets/no_flagship_ui.js").read_text()
-          visual=Path("app/src/main/assets/v1_1_visual_patch.js").read_text()
+          art=Path("app/src/main/assets/no_flagship_art.js").read_text()
           assert 'src="game.js"' not in index
           assert 'src="ui_patch.js"' not in index
           assert 'src="no_flagship_game.js"' in index
-          assert 'src="v1_1_visual_patch.js"' in index
+          assert 'src="no_flagship_art.js"' in index
+          assert 'src="v1_1_visual_patch.js"' not in index
           assert 'src="no_flagship_ui.js"' in index
           assert "ship:" not in game
           assert "Флагман" not in game
@@ -53,10 +54,12 @@ jobs:
           assert "ANSWER_REVEAL_MS=3000" in game
           assert "correctReveal" in game
           assert "claimOrderMark" in game and "claimOrders" in game
+          assert "showNumericReveal" in game and "NUMERIC_REORDER_DELAY" in game
           assert "setupGestures" in ui
           assert "Math.max(u.width/1600,u.height/900)*.96" in ui
           assert Path("docs/no-flagship-ui-spec.md").exists()
-          assert "MAP_SVG" in visual and "ARTS={" in visual
+          assert "ISLAND_SPRITE" in art and "data:image/webp;base64" in art
+          assert "background-position:33.333% 0" in art
           assert "fitPirateMap" in ui
           print("No-flagship clean runtime sanity: OK")
           PY

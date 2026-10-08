@@ -43,7 +43,7 @@ button,input{font:inherit}
 .sheet h2{margin:7px 0 15px;font-family:Georgia,serif;font-size:24px;text-align:center}
 .answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}.answer{--attacker-fill:#3f2a1b;--defender-fill:#3f2a1b;min-height:55px;border-radius:12px;background:linear-gradient(90deg,var(--attacker-fill) 0 50%,var(--defender-fill) 50% 100%);color:#fff0cf;border:2px solid #9b7542;padding:11px 13px;text-align:left;font-weight:800;text-shadow:0 1px 2px #201006;transition:background .18s,box-shadow .18s,outline-color .18s}.answer:disabled{opacity:1}.answer.correctReveal{outline:3px solid #62e66d;outline-offset:2px;box-shadow:0 0 16px rgba(78,255,104,.9),inset 0 0 0 1px rgba(205,255,211,.8)}
 .numericBox{display:none}.numrow{display:flex;gap:8px}.numrow input{flex:1;padding:12px;border-radius:10px;border:1px solid #9b7b49;background:#fff9e8;color:#25180d;font-size:18px}.btn.gold{background:#704518;color:#fff0ca;border-radius:10px;padding:10px 16px}
-#battleResult{min-height:24px;margin-top:12px;text-align:center;font-size:13px;font-weight:800;color:#5a4025}
+#battleResult{min-height:24px;margin-top:12px;text-align:center;font-size:13px;font-weight:800;color:#5a4025}.numericCorrect{font-size:15px;margin:8px 0 10px}.numericRanking{display:flex;flex-direction:column;gap:8px;max-width:470px;margin:0 auto}.numericAnswerRow{display:grid;grid-template-columns:24px 14px 1fr auto;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:#fff6dda8;border:1px solid #9a7649;text-align:left;transition:transform .28s,background .28s}.numericAnswerRow i{width:12px;height:12px;border-radius:3px;background:var(--numeric-color)}.numericAnswerRow>span:last-child{font-size:18px;font-weight:900}.numericWinner{background:#fff3b8;box-shadow:0 0 0 2px #d6a937,0 0 12px #d6a93766}.numericWinner .numericRank{font-weight:900;color:#7b541c}.numericLoser{opacity:.76}
 .finalTable{width:100%;border-collapse:collapse}.finalTable th,.finalTable td{padding:8px;border-bottom:1px solid #8c6b3e55;text-align:center}.finalActions{display:flex;justify-content:center;margin-top:14px}.finalActions button{padding:10px 18px;border-radius:10px;background:#704518;color:#fff0ca;border:0;font-weight:900}
 @media(max-height:620px){.parchmentChip{height:45px;min-width:100px}.resourceIcon{width:30px;height:30px}.roundCard{width:250px}.rightRail{top:72px;right:12px;bottom:12px;width:166px;gap:8px}.turnBoard{padding:8px}.turnRow{height:24px}.actionBtn{width:166px;height:55px;font-size:16px}.boostBtn{width:50px;height:48px}.sheet{max-height:90vh}}
 </style>
@@ -92,7 +92,7 @@ button,input{font:inherit}
   </section>
 </div>
 <script src="no_flagship_game.js"></script>
-<script src="v1_1_visual_patch.js"></script>
+<script src="no_flagship_art.js"></script>
 <script src="no_flagship_ui.js"></script>
 </body>
 </html>

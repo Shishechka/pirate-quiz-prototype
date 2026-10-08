@@ -26,14 +26,14 @@
     '.timeline{display:flex!important;flex-direction:column!important;gap:6px!important;align-items:stretch!important;justify-content:flex-start!important}',
     '.turnCaption{display:block!important}',
     '.rightRail .boostBtn{position:relative!important}',
-    'body[data-phase="CLAIM"] .turnBoard{align-self:flex-end!important;width:auto!important;padding:0!important;margin-top:20px!important;background:transparent!important;border:0!important;box-shadow:none!important;pointer-events:none!important}',
+    'body[data-phase="CLAIM"] .turnBoard{position:absolute!important;right:72px!important;top:96px!important;width:24px!important;padding:0!important;margin:0!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:none!important}',
     'body[data-phase="CLAIM"] .turnCaption{display:none!important}',
-    'body[data-phase="CLAIM"] .timeline{display:flex!important;flex-direction:column!important;gap:7px!important;align-items:flex-end!important;width:auto!important}',
-    '.claimRoundRow{display:flex;gap:3px;align-items:center;justify-content:flex-end;opacity:.48}',
-    '.claimRoundRow.doneRound{opacity:.18}.claimRoundRow.currentRound{opacity:1}',
-    '.claimOrderMark{display:block;width:16px;height:5px;border-radius:3px;background:var(--claim-color);box-shadow:0 1px 2px rgba(31,15,6,.65)}',
-    '.claimOrderMark.done{opacity:.28}.claimOrderMark.current{height:8px;opacity:1;outline:2px solid #fff0b7;outline-offset:1px;box-shadow:0 0 8px #fff0b7}',
-    '@media(max-height:620px){body[data-phase="CLAIM"] .turnBoard{margin-top:8px!important}.claimOrderMark{width:14px;height:4px}.claimRoundRow{gap:2px}}'
+    'body[data-phase="CLAIM"] .timeline{display:flex!important;flex-direction:column!important;gap:13px!important;align-items:center!important;width:24px!important}',
+    '.claimRoundGroup{display:flex;flex-direction:column;gap:3px;align-items:center;opacity:.48}',
+    '.claimRoundGroup.doneRound{opacity:.18}.claimRoundGroup.currentRound{opacity:1}',
+    '.claimOrderMark{display:block;width:21px;height:6px;border-radius:1px;background:var(--claim-color);box-shadow:none}',
+    '.claimOrderMark.current{outline:2px solid #fff4c9;outline-offset:1px;box-shadow:0 0 6px #fff4c9}',
+    '@media(max-height:620px){body[data-phase="CLAIM"] .turnBoard{right:62px!important;top:78px!important}.claimRoundGroup{gap:2px}.claimOrderMark{width:18px;height:5px}.timeline{gap:9px!important}}'
   ].join('');
   document.head.appendChild(style);
 

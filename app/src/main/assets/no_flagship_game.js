@@ -62,6 +62,8 @@ const HUMAN_QUESTION_MS=20000;
 const BOT_THINK_MIN=2500;
 const BOT_THINK_MAX=4500;
 const ANSWER_REVEAL_MS=3000;
+const NUMERIC_REORDER_DELAY=900;
+const NUMERIC_RANKED_HOLD=2400;
 
 function randomMs(min,max){return min+Math.floor(Math.random()*(max-min+1));}
 function log(t){const el=$('log');if(!el)return;const d=document.createElement('div');d.textContent=t;el.prepend(d);}
@@ -355,10 +357,22 @@ function humanTimeout(def){
     const attackerChoice=pending.attacker==='R'?null:botChoice;
     const defenderChoice=def==='R'?null:botChoice;
     revealMcq(q,attackerChoice,defenderChoice,def);
+    $('battleResult').textContent='Время вышло — человек проигрывает дуэль.';
+    const winner=pending.attacker==='R'?'DEFENDER':'ATTACKER';
+    setTimeout(()=>{closeQuestion();applyDuel(winner);},ANSWER_REVEAL_MS);
+    return;
   }
-  $('battleResult').textContent='Время вышло — человек проигрывает дуэль.';
-  const winner=pending.attacker==='R'?'DEFENDER':'ATTACKER';
-  setTimeout(()=>{closeQuestion();applyDuel(winner);},ANSWER_REVEAL_MS);
+  if(activeQuestion&&activeQuestion.type==='NUM'){
+    const q=activeQuestion.q;
+    const botGuess=q[1]*(1+(Math.random()-.5)*.28);
+    const attackerGuess=pending.attacker==='R'?null:botGuess;
+    const defenderGuess=def==='R'?null:botGuess;
+    const winner=pending.attacker==='R'?'DEFENDER':'ATTACKER';
+    showNumericReveal(def,attackerGuess,defenderGuess,q[1]).then(()=>{
+      if(!pending)return;
+      closeQuestion();applyDuel(winner);
+    });
+  }
 }
 function humanMcqAnswered(index){
   if(!pending||!activeQuestion||activeQuestion.type!=='MCQ')return;
@@ -393,18 +407,45 @@ function askHumanNumeric(def){
   activeQuestion={type:'NUM',q,def};
   animateTimer(HUMAN_QUESTION_MS,()=>humanTimeout(def));
 }
-function humanNumericSubmit(){
+function formatNumber(v){
+  if(v==null||!Number.isFinite(v))return '—';
+  return String(Math.round(v*100)/100);
+}
+async function showNumericReveal(def,attackerGuess,defenderGuess,correct){
+  $('numericBox').style.display='none';
+  const result=$('battleResult');
+  const rows=[
+    {player:pending.attacker,value:attackerGuess,error:Number.isFinite(attackerGuess)?Math.abs(attackerGuess-correct):Infinity},
+    {player:def,value:defenderGuess,error:Number.isFinite(defenderGuess)?Math.abs(defenderGuess-correct):Infinity}
+  ];
+  result.innerHTML='<div class="numericCorrect">Правильный ответ: <b>'+formatNumber(correct)+'</b></div>'+
+    '<div class="numericRanking">'+rows.map(r=>'<div class="numericAnswerRow" data-player="'+r.player+'" data-error="'+r.error+'"><span class="numericRank"></span><i style="--numeric-color:'+COLORS[r.player]+'"></i><b>'+NAMES[r.player]+'</b><span>'+formatNumber(r.value)+'</span></div>').join('')+'</div>';
+  await sleep(NUMERIC_REORDER_DELAY);
+  if(!pending)return;
+  const box=result.querySelector('.numericRanking');
+  const nodes=[...box.children].sort((a,b)=>Number(a.dataset.error)-Number(b.dataset.error));
+  nodes.forEach((node,index)=>{
+    node.querySelector('.numericRank').textContent=(index+1)+'.';
+    node.classList.add(index===0?'numericWinner':'numericLoser');
+    box.appendChild(node);
+  });
+  await sleep(NUMERIC_RANKED_HOLD);
+}
+async function humanNumericSubmit(){
   if(!pending||!activeQuestion||activeQuestion.type!=='NUM')return;
   const v=parseFloat($('nInput').value);
   if(!Number.isFinite(v))return;
   stopQuestionTimer(false);
-  const {q}=activeQuestion;
+  const {q,def}=activeQuestion;
   const ans=q[1];
   const botGuess=ans*(1+(Math.random()-.5)*.28);
-  const humanWins=Math.abs(v-ans)<=Math.abs(botGuess-ans);
-  const winner=(pending.attacker==='R'?humanWins:!humanWins)?'ATTACKER':'DEFENDER';
-  $('battleResult').textContent='Твой ответ: '+v+' · соперник: '+Math.round(botGuess*100)/100;
-  setTimeout(()=>{closeQuestion();applyDuel(winner);},ANSWER_REVEAL_MS);
+  const attackerGuess=pending.attacker==='R'?v:botGuess;
+  const defenderGuess=def==='R'?v:botGuess;
+  const winner=Math.abs(attackerGuess-ans)<=Math.abs(defenderGuess-ans)?'ATTACKER':'DEFENDER';
+  await showNumericReveal(def,attackerGuess,defenderGuess,ans);
+  if(!pending)return;
+  closeQuestion();
+  applyDuel(winner);
 }
 
 async function botVsBotMcq(def){
@@ -460,8 +501,7 @@ async function botVsBotNumeric(def){
   const ag=ans*(1+(Math.random()-.5)*.28);
   const dg=ans*(1+(Math.random()-.5)*.28);
   const winner=Math.abs(ag-ans)<=Math.abs(dg-ans)?'ATTACKER':'DEFENDER';
-  $('battleResult').textContent=NAMES[pending.attacker]+': '+(Math.round(ag*100)/100)+' · '+NAMES[def]+': '+(Math.round(dg*100)/100);
-  await sleep(ANSWER_REVEAL_MS);
+  await showNumericReveal(def,ag,dg,ans);
   if(token!==runId||!pending)return;
   closeQuestion();
   applyDuel(winner);
@@ -621,20 +661,20 @@ function renderOrder(){
 
   if(claim){
     S.claimOrders.forEach((plan,roundIndex)=>{
-      const row=document.createElement('div');
-      row.className='claimRoundRow';
-      if(roundIndex<S.claimRound-1)row.classList.add('doneRound');
-      if(roundIndex===S.claimRound-1)row.classList.add('currentRound');
-      plan.queue.forEach((p,i)=>{
+      const group=document.createElement('div');
+      group.className='claimRoundGroup';
+      if(roundIndex<S.claimRound-1)group.classList.add('doneRound');
+      if(roundIndex===S.claimRound-1)group.classList.add('currentRound');
+      const activePlayer=roundIndex===S.claimRound-1?currentClaimPlayer():null;
+      plan.rank.forEach(p=>{
         const mark=document.createElement('span');
         mark.className='claimOrderMark';
-        if(roundIndex===S.claimRound-1&&i<S.claimIndex)mark.classList.add('done');
-        if(roundIndex===S.claimRound-1&&i===S.claimIndex&&!S.finished)mark.classList.add('current');
+        if(roundIndex===S.claimRound-1&&p===activePlayer&&!S.finished)mark.classList.add('current');
         mark.style.setProperty('--claim-color',COLORS[p]);
-        mark.title='Раунд '+(roundIndex+1)+' · '+NAMES[p];
-        row.appendChild(mark);
+        mark.title=NAMES[p];
+        group.appendChild(mark);
       });
-      root.appendChild(row);
+      root.appendChild(group);
     });
     return;
   }
