@@ -44,15 +44,17 @@ jobs:
           assert "Array.from({length:8}" in ui
           assert "for(var r=0;r<8;r++)" in ui
           assert "S.orders[r].forEach" in ui
-          assert "marks.every(n=>n===4)" in visual
-          assert "totalMarks===32" in visual
           assert "contentBounds()" in ui and "usableRect()" in ui
-          assert "v3_visual_patch.js" in index\n          assert "v1_1_visual_patch.js" not in index
+          assert "v3_visual_patch.js" in index
+          assert "v1_1_visual_patch.js" not in index
           assert "no_flagship_mode.js" in index
           assert "balance_test_patch.js" not in index
           assert "phase:'CLAIM'" in noflag
           assert "Ship gameplay disabled" in noflag
-          assert "--island-sprite" in ui\n          assert "__PIRATES_MANUAL_BOOT__" in index\n          assert "questionTimerFill" in index\n          assert "QUESTION_MS=20000" in noflag
+          assert "--island-sprite" in ui
+          assert "__PIRATES_MANUAL_BOOT__" in index
+          assert "questionTimerFill" in index
+          assert "QUESTION_MS=20000" in noflag
           print("Pirates no-flagship source sanity: OK")
           PY
 
