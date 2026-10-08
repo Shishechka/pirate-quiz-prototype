@@ -1,4 +1,5 @@
 'use strict';
+// HUD checkpoint: compact resources, live standings, bottom turn timeline.
 (function(){
   const API=window.PiratesNoFlagship;
   if(!API)throw new Error('Pirates no-flagship engine is not loaded');
