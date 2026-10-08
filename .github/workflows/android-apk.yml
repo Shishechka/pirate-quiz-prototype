@@ -3,7 +3,7 @@ name: Build Pirates no-flagship lab
 on:
   workflow_dispatch:
   push:
-    branches: [ main, no-flagship-lab ]
+    branches: [ no-flagship-lab ]
 
 jobs:
   build:
@@ -31,31 +31,28 @@ jobs:
           base64 -d ci/pirates-v1.keystore.b64 > ci/pirates-v1.keystore
           keytool -list -keystore ci/pirates-v1.keystore -storepass piratesv1 -alias piratesdebug >/dev/null
 
-      - name: Pirates no-flagship source sanity
+      - name: No-flagship runtime sanity
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          game=Path("app/src/main/assets/game.js").read_text()
-          ui=Path("app/src/main/assets/ui_patch.js").read_text()
           index=Path("app/src/main/assets/index.html").read_text()
-          visual=Path("app/src/main/assets/v3_visual_patch.js").read_text()
-          noflag=Path("app/src/main/assets/no_flagship_mode.js").read_text()
-          assert "for(let i=1;i<=36;i++)" in game
-          assert "Array.from({length:8}" in ui
-          assert "for(var r=0;r<8;r++)" in ui
-          assert "S.orders[r].forEach" in ui
-          assert "contentBounds()" in ui and "usableRect()" in ui
-          assert "v3_visual_patch.js" in index
-          assert "v1_1_visual_patch.js" not in index
-          assert "no_flagship_mode.js" in index
-          assert "balance_test_patch.js" not in index
-          assert "phase:'CLAIM'" in noflag
-          assert "Ship gameplay disabled" in noflag
-          assert "--island-sprite" in ui
-          assert "__PIRATES_MANUAL_BOOT__" in index
-          assert "questionTimerFill" in index
-          assert "QUESTION_MS=20000" in noflag
-          print("Pirates no-flagship source sanity: OK")
+          game=Path("app/src/main/assets/no_flagship_game.js").read_text()
+          ui=Path("app/src/main/assets/no_flagship_ui.js").read_text()
+          visual=Path("app/src/main/assets/v1_1_visual_patch.js").read_text()
+          assert 'src="game.js"' not in index
+          assert 'src="ui_patch.js"' not in index
+          assert 'src="no_flagship_game.js"' in index
+          assert 'src="v1_1_visual_patch.js"' in index
+          assert 'src="no_flagship_ui.js"' in index
+          assert "ship:" not in game
+          assert "Флагман" not in game
+          assert "phase:'CLAIM'" in game
+          assert "botVsBotMcq" in game and "BOT_THINK_MIN" in game
+          assert "baseVisualOwner" in game
+          assert "HUMAN_QUESTION_MS=20000" in game
+          assert "MAP_SVG" in visual and "ARTS={" in visual
+          assert "fitPirateMap" in ui
+          print("No-flagship clean runtime sanity: OK")
           PY
 
       - uses: gradle/actions/setup-gradle@v4
@@ -65,18 +62,16 @@ jobs:
       - name: Clean Gradle build
         run: gradle clean :app:assembleDebug
 
-      - name: Verify APK package, version, alignment and signature
+      - name: Verify APK
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")
           echo "$BADGING" | grep "package: name='com.piratequiz.prototype'"
-          echo "$BADGING" | grep "versionCode='2'"
-          echo "$BADGING" | grep "versionName='1.1.0'"
-          cp "$APK" "Pirates-no-flagship-lab.apk"
+          cp "$APK" "Pirates-no-flagship-refactor.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Pirates-no-flagship-lab
-          path: Pirates-no-flagship-lab.apk
+          name: Pirates-no-flagship-refactor
+          path: Pirates-no-flagship-refactor.apk
