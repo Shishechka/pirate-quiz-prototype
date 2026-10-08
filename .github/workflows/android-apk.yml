@@ -60,7 +60,7 @@ jobs:
           assert "right:92px" in ui and "orderMark" in ui
           assert "renderStandings" in game
           assert "standingsRows" in index
-          assert 'body[data-phase="CLAIM"] .actionBtn' in index
+          assert '.actionBtn{display:none!important}' in index
           assert "Math.max(u.width/1600,u.height/900)*.96" in ui
           assert Path("docs/no-flagship-ui-spec.md").exists()
           assert "ISLAND_SPRITE" in art and "data:image/webp;base64" in art
