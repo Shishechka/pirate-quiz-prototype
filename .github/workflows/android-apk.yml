@@ -82,7 +82,7 @@ jobs:
           assert 'art/approved_assets_atlas_v1.webp' in art
           assert 'art/base_A_red_v1_1.webp' in art
           assert "#routeSvg{display:block" in art
-          assert ".base[data-base=\\"A\\"]" in art
+          assert 'data-base="A"' in art
           assert "background:none!important" in ui and "bottom:15px" in ui
           assert "width:210px" in index and "rgba(245,226,184,.62)" in index
           assert Path("app/src/main/assets/art/approved_map_v1_1.webp").exists()
