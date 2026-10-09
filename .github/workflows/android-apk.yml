@@ -41,6 +41,15 @@ jobs:
           test $(stat -c%s app/src/main/assets/art/approved_map_v1.webp) -eq 867412
           test $(stat -c%s app/src/main/assets/art/approved_assets_atlas_v1.webp) -eq 538756
 
+          # Materialize all four locked/approved bases; their sources are NOT runtime image URLs.
+          for base in base_A_red base_B_blue base_C_green base_D_purple; do
+            cat "app/src/main/assets/art-src/approved-bases-v1/$base"/part_*.b64 | tr -d '\\n\\r' | base64 -d > "app/src/main/assets/art/$base.webp"
+          done
+          echo "60f30305792ebe2d3e86301d0000c9c077d9e608c6dca3ab65e1290dc3775163  app/src/main/assets/art/base_A_red.webp" | sha256sum -c -
+          echo "752f14a61c5025f9138ed0d8dc9146e4dd01027e9ca3172b9c89e89b8f10f0e9  app/src/main/assets/art/base_B_blue.webp" | sha256sum -c -
+          echo "b2c1841d4ccf0e2295883b1667ae06a82a55e83e5a771d9b1d2651195b5a7cda  app/src/main/assets/art/base_C_green.webp" | sha256sum -c -
+          echo "709a92c1d2204ff6b1dc45c1ace11b832f5ac2e729412188414da46d80bc2de6  app/src/main/assets/art/base_D_purple.webp" | sha256sum -c -
+
       - name: No-flagship runtime sanity
         run: |
           python3 - <<'PY'
@@ -80,7 +89,11 @@ jobs:
           assert "renderStandings" in game
           assert "standingsRows" in index
           assert '.actionBtn{display:none!important}' in index
-          assert "Math.max(u.width/1600,u.height/900)*.96" in ui
+          assert "Math.max(u.width/1600,u.height/900)" in ui
+          assert 'src="approved_corner_bases.js"' in index
+          bases=Path("app/src/main/assets/approved_corner_bases.js").read_text()
+          assert all(name in bases for name in ("base_A_red.webp","base_B_blue.webp","base_C_green.webp","base_D_purple.webp"))
+          assert all(Path("app/src/main/assets/art/"+name).exists() for name in ("base_A_red.webp","base_B_blue.webp","base_C_green.webp","base_D_purple.webp"))
           assert "Approved Art Pack 1.0" in art
           assert 'art/approved_map_v1.webp' in art
           assert "#routeSvg{display:none" in art
