@@ -87,7 +87,7 @@ jobs:
           assert "width:210px" in index and "rgba(245,226,184,.62)" in index
           assert Path("app/src/main/assets/art/approved_map_v1_1.webp").exists()
           assert Path("app/src/main/assets/art/base_A_red_v1_1.webp").exists()
-          print("Schema 1.0 / Art Pack 1.1 runtime sanity: OK")
+          print("Schema 1.0 / Layered Art Pack v1.2 runtime sanity: OK")
           PY
 
       - uses: gradle/actions/setup-gradle@v4
