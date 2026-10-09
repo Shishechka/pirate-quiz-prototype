@@ -72,14 +72,19 @@ jobs:
           assert "S.orders" in game and "showNumericReveal" in game
           assert "renderStandings" in game and "standingsRows" in index
           assert "setupGestures" in ui and "fitPirateMap" in ui
-          assert "const colX=[300,500,700,900,1100,1300],rowY=[170,290,410,530,650,770]" in ui
-          assert "A:{x:150,y:145}" in ui and "D:{x:1450,y:755}" in ui
-          assert "Math.max(u.width/1600,u.height/900)*1.01" in ui
-          assert "left:22%" in ui and "right:22%" in ui
-          assert "Approved Art Pack 1.1" in art
-          assert 'art/approved_map_v1_1.webp' in art
-          assert "#routeSvg{display:none" in art
-          assert "width:238px" in index and "backdrop-filter:blur(4px)" in index
+          assert "const SCENE_W=1800,SCENE_H=900" in ui
+          assert "const colX=[290,530,770,1030,1270,1510],rowY=[150,270,390,510,630,750]" in ui
+          assert "A:{x:120,y:135}" in ui and "D:{x:1680,y:765}" in ui
+          assert "Math.max(u.width/SCENE_W,u.height/SCENE_H)" in ui
+          assert "cleanSeaLayer" in index
+          assert index.index("turnBoard") < index.index("</div>\n  </div>\n  <div class=\"hud topHud\"")
+          assert "Layered Art Pack v1.2" in art
+          assert 'art/approved_assets_atlas_v1.webp' in art
+          assert 'art/base_A_red_v1_1.webp' in art
+          assert "#routeSvg{display:block" in art
+          assert ".base[data-base=\\"A\\"]" in art
+          assert "background:none!important" in ui and "bottom:15px" in ui
+          assert "width:210px" in index and "rgba(245,226,184,.62)" in index
           assert Path("app/src/main/assets/art/approved_map_v1_1.webp").exists()
           assert Path("app/src/main/assets/art/base_A_red_v1_1.webp").exists()
           print("Schema 1.0 / Art Pack 1.1 runtime sanity: OK")
@@ -99,9 +104,9 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")
           echo "$BADGING" | grep "package: name='com.piratequiz.prototype'"
-          cp "$APK" "Pirates-schema-1.0-art-v1.1.apk"
+          cp "$APK" "Pirates-schema-1.0-layered-v1.2.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Pirates-schema-1.0-art-v1.1
-          path: Pirates-schema-1.0-art-v1.1.apk
+          name: Pirates-schema-1.0-layered-v1.2
+          path: Pirates-schema-1.0-layered-v1.2.apk

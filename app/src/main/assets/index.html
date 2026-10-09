@@ -11,14 +11,14 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#241307;fon
 button,input{font:inherit}
 #app{position:relative;width:100%;height:100%;overflow:hidden;background:#2b190e}
 .mapViewport{position:absolute;inset:0;overflow:hidden;touch-action:none;user-select:none}
-.mapScene{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0}
-.routeSvg{position:absolute;inset:0;width:1600px;height:900px;pointer-events:none}
+.mapScene{position:absolute;left:0;top:0;width:1800px;height:900px;transform-origin:0 0}
+.routeSvg{position:absolute;inset:0;width:1800px;height:900px;pointer-events:none}
 #map{position:absolute;inset:0}
 .tile,.base{position:absolute;transform:translate(-50%,-50%);touch-action:none}
 .hud{position:absolute;z-index:30;pointer-events:none}.hud>*{pointer-events:auto}
 .topHud{left:0;right:0;top:0;display:block;padding:0}
-.roundCard{position:absolute;left:50%;top:0;transform:translateX(-50%);width:238px;text-align:center;padding:3px 10px 5px;border-radius:0 0 13px 13px;border:1px solid rgba(113,80,43,.58);border-top:0;background:linear-gradient(rgba(245,226,184,.80),rgba(210,169,102,.72));box-shadow:0 3px 8px rgba(42,22,10,.38);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-family:system-ui,sans-serif}
-.roundCard b{font-size:17px;line-height:1.05}.roundCard span{display:block;margin-top:2px;padding:2px 6px;border-radius:7px;background:rgba(111,36,29,.80);color:#fff1d0;font-size:9px;font-weight:800;line-height:1.15}
+.roundCard{position:absolute;left:50%;top:0;transform:translateX(-50%);width:210px;text-align:center;padding:2px 8px 4px;border-radius:0 0 11px 11px;border:1px solid rgba(113,80,43,.42);border-top:0;background:linear-gradient(rgba(245,226,184,.62),rgba(210,169,102,.48));box-shadow:0 2px 7px rgba(42,22,10,.28);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);font-family:system-ui,sans-serif}
+.roundCard b{font-size:15px;line-height:1.05}.roundCard span{display:block;margin-top:2px;padding:2px 5px;border-radius:6px;background:rgba(111,36,29,.70);color:#fff1d0;font-size:8px;font-weight:800;line-height:1.12}
 .standingsPanel{position:absolute;z-index:31;left:14px;top:62px;width:132px;padding:7px 8px 8px;border-radius:11px;background:rgba(35,20,11,.38);border:1px solid rgba(255,232,181,.20);box-shadow:0 3px 10px rgba(20,10,5,.24);color:#fff0cf;font-family:system-ui,sans-serif;pointer-events:none}
 .standingsHead{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;gap:4px;padding:0 3px 5px;font-size:7px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,240,207,.68);text-align:center}
 .standingRow{height:23px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;gap:4px;border-radius:7px;padding:0 3px;color:#fff2d2;font-size:11px;font-weight:900;text-align:center}
@@ -50,20 +50,21 @@ button,input{font:inherit}
 .numericBox{display:none}.numrow{display:flex;gap:8px}.numrow input{flex:1;padding:12px;border-radius:10px;border:1px solid #9b7b49;background:#fff9e8;color:#25180d;font-size:18px}.btn.gold{background:#704518;color:#fff0ca;border-radius:10px;padding:10px 16px}
 #battleResult{min-height:24px;margin-top:12px;text-align:center;font-size:13px;font-weight:800;color:#5a4025}.numericCorrect{font-size:15px;margin:8px 0 10px}.numericRanking{display:flex;flex-direction:column;gap:8px;max-width:470px;margin:0 auto}.numericAnswerRow{display:grid;grid-template-columns:24px 14px 1fr auto;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:#fff6dda8;border:1px solid #9a7649;text-align:left;transition:transform .28s,background .28s}.numericAnswerRow i{width:12px;height:12px;border-radius:3px;background:var(--numeric-color)}.numericAnswerRow>span:last-child{font-size:18px;font-weight:900}.numericWinner{background:#fff3b8;box-shadow:0 0 0 2px #d6a937,0 0 12px #d6a93766}.numericWinner .numericRank{font-weight:900;color:#7b541c}.numericLoser{opacity:.76}
 .finalTable{width:100%;border-collapse:collapse}.finalTable th,.finalTable td{padding:8px;border-bottom:1px solid #8c6b3e55;text-align:center}.finalActions{display:flex;justify-content:center;margin-top:14px}.finalActions button{padding:10px 18px;border-radius:10px;background:#704518;color:#fff0ca;border:0;font-weight:900}
-@media(max-height:620px){.roundCard{width:218px;padding:2px 8px 4px}.roundCard b{font-size:15px}.roundCard span{font-size:8px}.rightRail{right:10px;top:10px;bottom:10px;width:62px;gap:5px}.resourceMini{height:27px;padding:0 5px;grid-template-columns:20px 1fr}.resourceMini span{font-size:14px}.resourceMini b{font-size:14px}.boostBtn{width:50px;height:44px}.actionBtn{width:154px;height:52px;font-size:15px}.standingsPanel{left:10px;top:66px;width:120px;padding:6px}.standingRow{height:20px;font-size:10px}.standingColor{width:22px}.sheet{max-height:90vh}}
+@media(max-height:620px){.roundCard{width:194px;padding:2px 7px 3px}.roundCard b{font-size:14px}.roundCard span{font-size:7.5px}.rightRail{right:10px;top:10px;bottom:10px;width:62px;gap:5px}.resourceMini{height:27px;padding:0 5px;grid-template-columns:20px 1fr}.resourceMini span{font-size:14px}.resourceMini b{font-size:14px}.boostBtn{width:50px;height:44px}.actionBtn{width:154px;height:52px;font-size:15px}.standingsPanel{left:10px;top:66px;width:120px;padding:6px}.standingRow{height:20px;font-size:10px}.standingColor{width:22px}.sheet{max-height:90vh}}
 </style>
 </head>
 <body>
 <main id="app">
   <div id="mapViewport" class="mapViewport">
     <div id="mapScene" class="mapScene">
-      <svg id="routeSvg" class="routeSvg" viewBox="0 0 1600 900"></svg>
+      <div id="cleanSeaLayer" aria-hidden="true"></div>
+      <svg id="routeSvg" class="routeSvg" viewBox="0 0 1800 900"></svg>
       <div id="map"></div>
       <button class="base" data-base="A"></button>
       <button class="base" data-base="B"></button>
       <button class="base" data-base="C"></button>
       <button class="base" data-base="D"></button>
-    </div>
+        </div>
   </div>
   <div class="hud topHud">
     <div class="roundCard"><b id="roundV">Освоение 1/6</b><span id="status">Подготовка карты…</span></div>
