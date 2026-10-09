@@ -40,10 +40,12 @@
       el.style.top=p.y+'px';
       el.style.setProperty('--rot',(((id%5)-2)*1.4)+'deg');
     });
+    const corner={A:[0,0,'translate(0,0)'],B:[1600,0,'translate(-100%,0)'],C:[0,900,'translate(0,-100%)'],D:[1600,900,'translate(-100%,-100%)']};
     ['A','B','C','D'].forEach(b=>{
-      const el=document.querySelector('[data-base="'+b+'"]'),p=pos(b);
-      el.style.left=p.x+'px';
-      el.style.top=p.y+'px';
+      const el=document.querySelector('[data-base="'+b+'"]'),p=corner[b];
+      el.style.left=p[0]+'px';
+      el.style.top=p[1]+'px';
+      el.style.transform=p[2];
     });
     drawRoutes(legalSet||new Set());
   };
