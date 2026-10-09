@@ -10,19 +10,17 @@
   };
   const style=document.createElement('style');
   style.textContent=`
-    .base{width:216px!important;height:190px!important;overflow:visible!important;isolation:isolate!important}
+    .base{width:252px!important;height:230px!important;overflow:visible!important;isolation:isolate!important}
     .base:before{
       content:''!important;
       display:block!important;
       position:absolute!important;
-      inset:-20px -18px!important;
+      inset:0!important;
       background-image:var(--approved-base)!important;
       background-position:center center!important;
       background-repeat:no-repeat!important;
-      background-size:100% 100%!important;
-      -webkit-mask-image:radial-gradient(ellipse 49% 48% at center,#000 73%,rgba(0,0,0,.95) 83%,transparent 100%)!important;
-      mask-image:radial-gradient(ellipse 49% 48% at center,#000 73%,rgba(0,0,0,.95) 83%,transparent 100%)!important;
-      filter:drop-shadow(0 4px 3px rgba(28,14,7,.45))!important;
+      background-size:contain!important;
+      filter:none!important;
       pointer-events:none!important;
       z-index:1!important
     }
