@@ -43,7 +43,7 @@ jobs:
 
           # Materialize all four locked/approved bases; their sources are NOT runtime image URLs.
           for base in base_A_red base_B_blue base_C_green base_D_purple; do
-            cat "app/src/main/assets/art-src/approved-bases-v1/$base"/part_*.b64 | tr -d '\\n\\r' | base64 -d > "app/src/main/assets/art/$base.webp"
+            cat "app/src/main/assets/art-src/approved-bases-v1/$base"/part_*.b64 | tr -d '\n\r' | base64 -d > "app/src/main/assets/art/$base.webp"
           done
           echo "60f30305792ebe2d3e86301d0000c9c077d9e608c6dca3ab65e1290dc3775163  app/src/main/assets/art/base_A_red.webp" | sha256sum -c -
           echo "752f14a61c5025f9138ed0d8dc9146e4dd01027e9ca3172b9c89e89b8f10f0e9  app/src/main/assets/art/base_B_blue.webp" | sha256sum -c -
