@@ -40,7 +40,7 @@
       el.style.top=p.y+'px';
       el.style.setProperty('--rot',(((id%5)-2)*1.4)+'deg');
     });
-    const corner={A:[0,0,'translate(0,0)'],B:[1600,0,'translate(-100%,0)'],C:[0,900,'translate(0,-100%)'],D:[1600,900,'translate(-100%,-100%)']};
+    const corner={A:[172,118,'translate(-50%,-50%)'],B:[1428,118,'translate(-50%,-50%)'],C:[172,782,'translate(-50%,-50%)'],D:[1428,782,'translate(-50%,-50%)']};
     ['A','B','C','D'].forEach(b=>{
       const el=document.querySelector('[data-base="'+b+'"]'),p=corner[b];
       el.style.left=p[0]+'px';
