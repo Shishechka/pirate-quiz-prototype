@@ -93,7 +93,7 @@
     const vp=document.getElementById('mapViewport');
     if(!vp||!vp.clientWidth||!vp.clientHeight)return;
     const u=usableRect();
-    view.baseScale=Math.max(u.width/1600,u.height/900)*.96;
+    view.baseScale=Math.max(u.width/1600,u.height/900);
     view.zoom=1;
     view.tx=(u.width-1600*view.baseScale)/2;
     view.ty=(u.height-900*view.baseScale)/2;
