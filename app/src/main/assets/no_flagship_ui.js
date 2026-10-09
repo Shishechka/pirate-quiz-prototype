@@ -4,15 +4,13 @@
   const API=window.PiratesNoFlagship;
   if(!API)throw new Error('Pirates no-flagship engine is not loaded');
 
-  const BASE_POS={A:{x:185,y:145},B:{x:1415,y:145},C:{x:185,y:755},D:{x:1415,y:755}};
-  const colX=[345,525,705,895,1075,1255],rowY=[175,280,385,500,615,720];
-  const jitterX=[0,-18,12,22,-14,10,16,8,-24,20,-8,18,-10,22,-20,12,20,-18,8,-12,16,-16,24,-10,20,-18,10,18,-22,8,-6,20,-16,14,-18,10];
-  const jitterY=[0,10,-8,7,-11,8,-9,11,4,-12,10,-5,8,-7,13,-10,6,0,-8,10,-11,6,11,-4,7,-10,9,-5,12,-8,-5,10,-9,6,-10,8];
+  const BASE_POS={A:{x:150,y:145},B:{x:1450,y:145},C:{x:150,y:755},D:{x:1450,y:755}};
+  const colX=[300,500,700,900,1100,1300],rowY=[170,290,410,530,650,770];
 
   function pos(node){
     if(typeof node==='string')return BASE_POS[node];
     const idx=node-1,r=Math.floor(idx/6),c=idx%6;
-    return{x:colX[c]+jitterX[idx],y:rowY[r]+jitterY[idx]};
+    return{x:colX[c],y:rowY[r]};
   }
 
   const style=document.createElement('style');

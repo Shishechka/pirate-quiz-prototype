@@ -3,7 +3,7 @@ name: Build Pirates no-flagship lab
 on:
   workflow_dispatch:
   push:
-    branches: [ no-flagship-lab ]
+    branches: [ 1.2.2 ]
 
 jobs:
   build:
@@ -36,9 +36,9 @@ jobs:
           mkdir -p app/src/main/assets/art
           cat app/src/main/assets/art-src/map/map_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/approved_map_v1.webp
           cat app/src/main/assets/art-src/atlas/atlas_*.b64 | tr -d '\n\r' | base64 -d > app/src/main/assets/art/approved_assets_atlas_v1.webp
-          echo "01b896b10fd46edc523ce1ded411690b1dc84fd0d730904813eba80141c14a1d  app/src/main/assets/art/approved_map_v1.webp" | sha256sum -c -
+          echo "6390f8c4868403590fb9206dae80fd61a7acd8af0c4b5dd9e721adac22906512  app/src/main/assets/art/approved_map_v1.webp" | sha256sum -c -
           echo "7c2c52440e8afa202ac78324f9b410409c941bf984096dd823640597af2889cf  app/src/main/assets/art/approved_assets_atlas_v1.webp" | sha256sum -c -
-          test $(stat -c%s app/src/main/assets/art/approved_map_v1.webp) -eq 521468
+          test $(stat -c%s app/src/main/assets/art/approved_map_v1.webp) -eq 867412
           test $(stat -c%s app/src/main/assets/art/approved_assets_atlas_v1.webp) -eq 538756
 
       - name: No-flagship runtime sanity
@@ -86,7 +86,8 @@ jobs:
           assert "#routeSvg{display:none" in art
           assert ".tile:before,.tile:after,.base:before,.base:after" in art
           assert "fitPirateMap" in ui
-          assert "A:{x:185,y:145}" in ui and "C:{x:185,y:755}" in ui
+          assert "const colX=[300,500,700,900,1100,1300],rowY=[170,290,410,530,650,770]" in ui
+          assert "A:{x:150,y:145}" in ui and "D:{x:1450,y:755}" in ui
           assert Path("app/src/main/assets/art/approved_map_v1.webp").exists()
           assert Path("app/src/main/assets/art/approved_assets_atlas_v1.webp").exists()
           print("No-flagship Art Pack 1.0 sanity: OK")
@@ -106,9 +107,9 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")
           echo "$BADGING" | grep "package: name='com.piratequiz.prototype'"
-          cp "$APK" "Pirates-schema-1.0-approved-art.apk"
+          cp "$APK" "Pirates-1.2.2.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Pirates-schema-1.0-approved-art
-          path: Pirates-schema-1.0-approved-art.apk
+          name: Pirates-1.2.2
+          path: Pirates-1.2.2.apk
